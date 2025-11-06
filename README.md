@@ -27,7 +27,7 @@ El protocolo utiliza el mecanismo de suscripción/publicación. Los dispositivos
  
 La comunicación usando MQTT requiere de la intervención de un agente software que se denomina bróker y que se encarga de administrar las publicaciones y las suscripciones y encaminar los mensajes que se publican. Naturalmente, el bróker también tiene que estar conectado a la red de área local.   
  
-El bróker puede ponerse en marcha en la RPi o en la estación de tierra. La herramienta mosquitto es ideal para crear un bróker y ponerlo en marcha. El siguiente vídeo muestra cómo instalar mosquitto en Windows:    
+El bróker puede ponerse en marcha en la RPi o en la estación de tierra. La herramienta mosquitto es ideal para crear un bróker y ponerlo en marcha. El siguiente vídeo muestra cómo instalar mosquitto en Windows:   
  
 https://www.youtube.com/watch?v=sxspkg8U_Lc   
  
@@ -63,36 +63,56 @@ De nuevo, uno de los agentes implicados (emisor o receptor) debe actuar como ser
  
 En la carpeta WebRTC/Local pueden encontrarse los códigos de un emisor (que en este caso es el que actúa como servidor) y un receptor que utilizan WebRTC para implementar video streaming.    
 
-## 3. Escenario global
-En este caso, tanto el emisor como el receptor (o receptores) están conectados a Internet y el stream de vídeo se va a transmitir a través de la red global. Por tanto, el receptor puede estar lejos del emisor. De nuevo, la implementación puede hacerse usando cualquiera de los tres protocolos considerados.
-MQTT
-En este caso, el bróker tiene que estar también conectado a Internet para que el receptor pueda publicar los frames de vídeo y el receptor pueda recibirlos. Lo más cómodo en este caso es utilizar un bróker público y gratuito. Algunos de los más utilizados son:
-Broker	Puerto TCP	Puerto websockets
-test.mosquitto.org	1883	8080
-broker.hivemq.com	1883	8000
-broker.emqx.io	1883	8083
+## 3. Escenario global   
 
-El puerto TCP que se indica en la tabla es el que debe usarse para una conexión global entre emisor y receptor. El puerto websockets es el que deberá usar la webapp, tal y como se explicará en el apartado X.
-En la carpeta MQTT/Global pueden encontrarse los códigos de un emisor y un receptor que se comunican el stream de video a través de un bróker público y gratuito. Los códigos son exactamente iguales que los del caso del escenario local excepto por lo que respecta a la conexión con el bróker. En los comentarios del código se indica cómo conectarse al resto de brokers públicos mencionados.
+En el escenario global tanto el emisor como el receptor (o receptores) están conectados a Internet y el stream de vídeo se va a transmitir a través de la red global. Por tanto, el receptor puede estar lejos del emisor. De nuevo, la implementación puede hacerse usando cualquiera de los tres protocolos considerados.   
+ 
+### 3.1 MQTT    
 
-Websockets
-En un escenario global el emisor y receptor están conectados a Internet pero pertenecen a redes de área local diferentes y no tienen asignadas IP públicas. Por tanto, no es posible establecer una conexión directa entre un cliente y un servidor, tal y como sí es posible en el caso del escenario local. 
-En este caso, la comunicación vía Websocket requiere de un proxy que haga de intermediario. El proxy debe estar conectado a internet y tener asignada una IP pública. El proxy actuará de servidor y creará el Websocket de manera que tanto el emisor como el receptor se conectarán al proxy usando la IP pública de éste. Ahora el emisor enviará el video stream al proxy que lo reenviará al receptor. 
-En la carpeta Websocket/Global pueden encontrarse los códigos de un emisor, un receptor y un proxy. Es importante tener en cuenta que el proxy debe ejecutarse en un ordenador conectado a internet y con una IP pública para que tanto el emisor como el receptor puedan conectarse.
+En este caso, el bróker tiene que estar también conectado a Internet para que el receptor pueda publicar los frames de vídeo y el receptor pueda recibirlos. Lo más cómodo en este caso es utilizar un bróker público y gratuito. Algunos de los más utilizados son:   
 
-WebRTC
+| Broker | Puerto TCP | Puerto Websockets |
+|---------------|-------------|---------|
+|test.mosquitto.org  |1883 | 8080 |
+|broker.hivemq.com | 1883 |8000|
+|broker.emqx.io    |1883| 8083 |
+
+El puerto TCP que se indica en la tabla es el que debe usarse para una conexión global entre emisor y receptor. El puerto websockets es el que deberá usar la webapp, tal y como se explicará en el apartado 4.1.
+En la carpeta MQTT/Global pueden encontrarse los códigos de un emisor y un receptor que se comunican el stream de video a través de un bróker público y gratuito. Los códigos son exactamente iguales que los del caso del escenario local excepto por lo que respecta a la conexión con el bróker. En los comentarios del código se indica cómo conectarse al resto de brokers públicos mencionados.   
+ 
+### 3.2 Websockets
+
+En un escenario global el emisor y receptor están conectados a Internet pero pertenecen a redes de área local diferentes y no tienen asignadas IP públicas. Por tanto, no es posible establecer una conexión directa entre un cliente y un servidor, tal y como sí es posible en el caso del escenario local.   
+
+En este caso, la comunicación vía Websocket requiere de un proxy que haga de intermediario. El proxy debe estar conectado a internet y tener asignada una IP pública. El proxy actuará de servidor y creará el Websocket de manera que tanto el emisor como el receptor se conectarán al proxy usando la IP pública de éste. Ahora el emisor enviará el video stream al proxy que lo reenviará al receptor.   
+ 
+En la carpeta Websocket/Global pueden encontrarse los códigos de un emisor, un receptor y un proxy. Es importante tener en cuenta que el proxy debe ejecutarse en un ordenador conectado a internet y con una IP pública para que tanto el emisor como el receptor puedan conectarse.   
+
+### 3.3 WebRTC   
+
 Al igual que en el caso de Websockets, si se usa WebRTC en un escenario global es necesaria la intervención de un proxy que hará el rol de servidor al que se conectarán tanto el emisor como el receptor. 
-En la carpeta WebRTC/Global pueden encontrarse los códigos de un emisor, un receptor y un proxy, que también debe ejecutarse en un ordenador con IP pública.
-WebApp
-Este escenario es un caso particular del escenario global, en el que el cliente es una WebApp. Esto permite que el video stream se reciba en un dispositivo móvil que se ha conectado a la WebApp. 
-Una WebApp es un servidor que sirve páginas web, igual que el servidor que sirve las páginas web de www.upc.edu. Pero las páginas web que sirve no tienen noticias o enlaces a documentos. Tienen botones de tal manera que cuando nos conectamos a la web desde el navegador del móvil lo que nos aparece en la pantalla es una página con botones, uno de los cuales, por ejemplo, nos permite hacer despegar el dron. Además, la WebApp puede proporcionar al cliente el stream de video que recibe del emisor para que el usuario puede verlo en su dispositivo móvil.
-Normalmente, la comunicación entre el servidor web y el navegador del dispositivo móvil que se conecta se realiza mediante el protocolo HTTP. Al conectarnos al servidor se realiza un GET para obtener el fichero html de la página principal y si se pulsa un botón de esa página se realiza un POST que permite al servidor detectar que el usuario quiere, por ejemplo, despegar el dron. La comunicación entre el servidor web y el dispositivo que controla el dron puede realizarse mediante MQTT o incluso WebSockets (no WebRTC porque no es admisible perder paquetes cuando se envían instrucciones). 
-No obstante, cuando se trata de llevar el stream de video hasta el cliente que se ha conectado al servidor web, el protocolo HTTP entre servidor web y navegador no es adecuado porque el mecanismo de petición/respuesta en el que se basa HTTP no soporta la frecuencia de transmisión de frames que requiere el stream de video. La alternativa es que el navegador del móvil se comunique directamente con el emisor usando cualquiera de los tres mecanismos de comunicación que estamos considerando en este tutorial.
-MQTT
-En este caso, una vez que el navegador del dispositivo móvil ha obtenido del servidor web la página HTML, la comunicación entre el emisor del stream de video y el navegador que se ha conectado a la WebApp se realiza vía MQTT (el emisor publica frames y el script de la WebApp suscribe los frames). Simplemente hay que tener en cuenta que en este caso el puerto del bróker al que debe conectarse el script que ejecuta el navegador debe ser un puerto que trabaje con websocket. En el apartado X se indica cuáles son esos puertos en el caso de los bróker públicos y gratuitos recomendados.
-En la carpeta MQTT/WebApp se proporcionan los códigos de una WebApp (servidor en Python y template en HTML) y de un emisor que publica en el bróker los frames de vídeo para que lleguen al dispositivo móvil.
-WebSockets
-En este caso, el servidor web actúa además como proxy para conectar vía websocket el emisor con el receptor (el navegador que se ha conectado a la WebApp). El emisor envía los frames al servidor web vía Websockets y el servidor web reenvía el frame al navegador.
-En la carpeta Websockets/WebApp se proporcionan los códigos de una WebApp (servidor en Python y template en HTML) que actúa como proxy entre el emisor del stream de video y el cliente que se conecta a la WebAp.
-WebRTC
+En la carpeta WebRTC/Global pueden encontrarse los códigos de un emisor, un receptor y un proxy, que también debe ejecutarse en un ordenador con IP pública.    
+ 
+## 4. WebApp   
+
+Este escenario es un caso particular del escenario global, en el que el cliente es una WebApp. Esto permite que el video stream se reciba en un dispositivo móvil que se ha conectado a la WebApp.   
+ 
+Una WebApp es un servidor que sirve páginas web, igual que el servidor que sirve las páginas web de www.upc.edu. Pero las páginas web que sirve no tienen noticias o enlaces a documentos. Tienen botones de tal manera que cuando nos conectamos a la web desde el navegador del móvil lo que nos aparece en la pantalla es una página con botones, uno de los cuales, por ejemplo, nos permite hacer despegar el dron. Además, la WebApp puede proporcionar al cliente el stream de video que recibe del emisor para que el usuario puede verlo en su dispositivo móvil.    
+ 
+Normalmente, la comunicación entre el servidor web y el navegador del dispositivo móvil que se conecta se realiza mediante el protocolo HTTP. Al conectarnos al servidor se realiza un GET para obtener el fichero HTML de la página principal y si se pulsa un botón de esa página se realiza un POST que permite al servidor detectar que el usuario quiere, por ejemplo, despegar el dron. La comunicación entre el servidor web y el dispositivo que controla el dron puede realizarse mediante MQTT o incluso WebSockets (no WebRTC porque no es admisible perder paquetes cuando se envían instrucciones).   
+ 
+No obstante, cuando se trata de llevar el stream de video hasta el cliente que se ha conectado al servidor web, el protocolo HTTP entre servidor web y navegador no es adecuado porque el mecanismo de petición/respuesta en el que se basa HTTP no soporta la frecuencia de transmisión de frames que requiere el stream de video. La alternativa es que el navegador del móvil se comunique directamente con el emisor usando cualquiera de los tres mecanismos de comunicación que estamos considerando en este tutorial.    
+ 
+### 4.1 MQTT   
+
+En este caso, una vez que el navegador del dispositivo móvil ha obtenido del servidor web la página HTML, la comunicación entre el emisor del stream de video y el navegador que se ha conectado a la WebApp se realiza vía MQTT (el emisor publica frames y el script de la WebApp suscribe los frames). Simplemente hay que tener en cuenta que en este caso el puerto del bróker al que debe conectarse el script que ejecuta el navegador debe ser un puerto que trabaje con websocket. En el apartado 3.1 se indica cuáles son esos puertos en el caso de los bróker públicos y gratuitos recomendados.    
+ 
+En la carpeta MQTT/WebApp se proporcionan los códigos de una WebApp (servidor en Python y template en HTML) y de un emisor que publica en el bróker los frames de vídeo para que lleguen al dispositivo móvil.   
+ 
+### 4.2 WebSockets   
+ 
+En este caso, el servidor web actúa además como proxy para conectar vía websocket el emisor con el receptor (el navegador que se ha conectado a la WebApp). El emisor envía los frames al servidor web vía Websockets y el servidor web reenvía el frame al navegador. En la carpeta Websockets/WebApp se proporcionan los códigos de una WebApp (servidor en Python y template en HTML) que actúa como proxy entre el emisor del stream de video y el cliente que se conecta a la WebAp.    
+
+### 4.3 WebRTC 
+
 PENDIENTE
