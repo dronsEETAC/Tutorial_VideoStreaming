@@ -1,0 +1,63 @@
+# receiver.py
+# Archivo: ./receiver.py
+# Receptor: espera offer, crea answer y muestra vídeo.
+
+import asyncio
+import json
+import cv2
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from websockets import connect
+
+async def display_track(track):
+    while True:
+        frame = await track.recv()
+        img = frame.to_ndarray(format="bgr24")
+        cv2.imshow("Receiver", img)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+    cv2.destroyAllWindows()
+
+async def run(server_url: str, stream_id: str):
+    pc = RTCPeerConnection()
+
+    @pc.on("track")
+    def on_track(track):
+        print("Track recibido:", track.kind)
+        if track.kind == "video":
+            asyncio.create_task(display_track(track))
+
+    async with connect(server_url) as ws:
+        # registro
+        await ws.send(json.dumps({"type": "register", "role": "receiver", "stream_id": stream_id}))
+        print("Registrado como receiver, esperando offer...")
+
+        @pc.on("icecandidate")
+        async def on_icecandidate(candidate):
+            if candidate:
+                await ws.send(json.dumps({"type": "candidate", "role": "receiver", "stream_id": stream_id, "candidate": candidate.to_dict()}))
+
+        async for raw in ws:
+            data = json.loads(raw)
+            if data.get("role") != "sender":
+                continue
+            if data.get("type") == "sdp":
+                # oferta llegada: aplicarla y crear answer
+                desc = RTCSessionDescription(sdp=data["sdp"], type=data["sdp_type"])
+                await pc.setRemoteDescription(desc)
+                answer = await pc.createAnswer()
+                await pc.setLocalDescription(answer)
+                await ws.send(json.dumps({"type": "sdp", "role": "receiver", "stream_id": stream_id, "sdp": pc.localDescription.sdp, "sdp_type": pc.localDescription.type}))
+                print("Answer enviada")
+            elif data.get("type") == "candidate":
+                await pc.addIceCandidate(data["candidate"])
+                print("Candidate sender añadido")
+
+
+if __name__ == "__main__":
+    import sys
+
+    # Poner la IP pública de la máquina
+    # en la que se ejecuta el proxy
+    server = sys.argv[1] if len(sys.argv) > 1 else "ws://IP_proxy:8107"
+    sid = sys.argv[2] if len(sys.argv) > 2 else "mi_stream"
+    asyncio.run(run(server, sid))

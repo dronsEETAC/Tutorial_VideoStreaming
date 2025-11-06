@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Video por MQTT</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { text-align: center; background: #111; color: white; }
+    img { width: 80%; max-width: 800px; margin-top: 20px; border-radius: 10px; box-shadow: 0 0 15px #000; }
+  </style>
+</head>
+<body>
+  <h1>📺 Stream de video vía MQTT</h1>
+  <img id="videoFrame" src="" alt="Esperando video..." />
+  <p id="status">Conectando...</p>
+
+  <script>
+    const broker = "ws://broker.hivemq.com:8000/mqtt";  // Broker público con puerto WebSockets
+    const topic = "demo/video/stream";
+
+    const client = mqtt.connect(broker);
+
+    const imgElement = document.getElementById("videoFrame");
+    const statusElement = document.getElementById("status");
+
+    client.on("connect", () => {
+      statusElement.textContent = "✅ Conectado al broker MQTT";
+      client.subscribe(topic);
+    });
+
+    client.on("message", (topic, message) => {
+      // Mensaje base64 → blob JPEG → actualizar <img>
+      const base64Image = message.toString();
+      imgElement.src = "data:image/jpeg;base64," + base64Image;
+    });
+
+    client.on("error", (err) => {
+      statusElement.textContent = "❌ Error de conexión: " + err.message;
+    });
+
+    client.on("reconnect", () => {
+      statusElement.textContent = "Reconectando...";
+    });
+  </script>
+</body>
+</html>

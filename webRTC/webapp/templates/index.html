@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC Video</title>
+</head>
+<body>
+    <h1>Video en tiempo real WebRTC</h1>
+
+    <img id="video" width="640" height="480"/>
+
+    <script>
+        async function start() {
+            const videoEl = document.getElementById("video");
+            const pc = new RTCPeerConnection();
+
+            pc.ontrack = function(event) {
+                //videoEl.srcObject = event.streams[0];
+                const b64data = event.streams[0];
+                videoEl.src = "data:image/jpeg;base64," + b64data;
+            }
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            // Enviar SDP al servidor Flask
+            const resp = await fetch("/offer", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    sdp: pc.localDescription.sdp,
+                    type: pc.localDescription.type
+                })
+            });
+            const data = await resp.json();
+            const answer = {sdp: data.sdp, type: data.type};
+            await pc.setRemoteDescription(answer);
+        }
+
+        start();
+    </script>
+</body>
+</html>
