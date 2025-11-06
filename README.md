@@ -1,4 +1,6 @@
-Introducción
+# Tutorial de videostreaming para el Drone Engineering Ecosystem   
+
+## 1. Introducción
 Una de las aplicaciones más habituales de los drones es la captación de imágenes. Un caso particular es el envío a tierra en tiempo real del stream de video capturado por la cámara del dron.
 La forma de implementar el video streaming depende del escenario concreto. No es lo mismo el caso en el que el emisor del vídeo sea la Raspberry Pi abordo y el receptor sea un portátil conectado a la misma red de área local que el caso en el que tanto el emisor como el receptor están conectados a Internet y físicamente lejos. 
 Además, existen varios protocolos de comunicación y herramientas para implementar video streaming, con sus ventajas en inconvenientes. 
