@@ -27,10 +27,10 @@ El protocolo utiliza el mecanismo de suscripción/publicación. Los dispositivos
  
 La comunicación usando MQTT requiere de la intervención de un agente software que se denomina bróker y que se encarga de administrar las publicaciones y las suscripciones y encaminar los mensajes que se publican. Naturalmente, el bróker también tiene que estar conectado a la red de área local.   
  
-El bróker puede ponerse en marcha en la RPi o en la estación de tierra. La herramienta mosquitto es ideal para crear un bróker y ponerlo en marcha. El siguiente vídeo muestra cómo instalar mosquitto en Windows:   
+El bróker puede ponerse en marcha en la RPi o en la estación de tierra. La herramienta mosquitto es ideal para crear un bróker y ponerlo en marcha. El siguiente vídeo muestra cómo instalar mosquitto en Windows:    
+
 [![](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dsxspkg8U_Lc)](https://www.youtube.com/watch?v=sxspkg8U_Lc)    
  
-https://www.youtube.com/watch?v=sxspkg8U_Lc   
  
 Es importante tener en cuesta que el fichero de configuración (mosquitto.conf) debe editarse con permisos de administración y que las dos líneas que hay que añadir son:   
 ```
