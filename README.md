@@ -116,4 +116,14 @@ En este caso, el servidor web actúa además como proxy para conectar vía webso
 
 ### 4.3 WebRTC 
 
-PENDIENTE
+En la carpeta WebRTC/WebApp pueden encontrarse los códigos de una WebApp que facilita la transmisión del stream de video entre un emisor en python y el cliente que se conecta a la Webapp. Como corresponde a la comunicación via WebRTC, el emisor y el cliente interambian mensajes iniciales por websocket a través del servidor, que lo único que hace es hacer de puente entre ambos. Una vez puestos de acuerdo el stream de video fluye desde el emisor al cliente de forma muy fluida.    
+
+## 5. Extras     
+En la carpeta de extras hay algunos códigos que no corresponden a ninguno de los escenarios anteriores y no son, por tanto, de aplicación en el ecosistema, pero que han resultado de mucha utilidad como pasos intermedios para la implementación que se ha descrito en el punto 4.3 (que ha sido la más complicada de todas).    
+
+### 5.1 ServidorFlaskWebRTC   
+Esta es una webapp que sirve al cliente el stream de video que el propio servidor captura. No es de aplicación en el ecosistema porque no interesa el video de la máquina en la que se ejecuta el servidor, sino el video del dron.    
+
+### 5.2 ProxyWebRTC-clientesVarios    
+Aquí tenemos un programa en python que hace de proxy para facilitar la comunicación entre emisor y receptor. Este proxy NO es una web app. Simplemente permite que emisor y receptos puedan ponerse de acuerdo a través del proxy que naturalmente debe tener una IP publica. Hay dos tipos de receptores. Uno es un programa en python y otro es un HTML+javascript que se ejecuta usando un navegador.   
+
