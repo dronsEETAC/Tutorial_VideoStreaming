@@ -5,7 +5,7 @@ import asyncio
 import websockets
 
 FLASK_WS_URL = "ws://147.83.249.79:8107/ws"  # Cambia IP o dominio
-
+FLASK_WS_URL = "ws://127.0.0.1:5000/ws"  # Cambia IP o dominio
 async def send_video():
     cap = cv2.VideoCapture(0)
     try:

@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- FILE: indexWebAppWebRTC.html -->
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WebRTC Receiver (WebSocket signaling)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#0f1720; color:#e6edf3; display:flex; flex-direction:column; align-items:center; gap:12px; padding:18px; }
+    .panel { width:100%; max-width:820px; background:#0b1220; border:1px solid #172033; padding:12px; border-radius:8px; }
+    input, button { padding:8px 10px; border-radius:6px; border:1px solid #234; background:#09101a; color:#e6edf3; }
+    button { cursor:pointer; }
+    video { width:100%; height:auto; background:#000; border-radius:6px; margin-top:8px; }
+    #log { height:120px; overflow:auto; background:#061017; padding:8px; border-radius:6px; border:1px solid #12232f; font-family: monospace; font-size:13px; color:#9fb8c8; }
+    label { font-size:14px; color:#9fb8c8; }
+    .row { display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <h2>Receptor WebRTC (señalización por WebSocket)</h2>
+
+  <div class="panel">
+    <div class="row">
+      <label for="server">WebSocket server:</label>
+      <input id="server" type="text" value="ws://127.0.0.1:8108" style="flex:1" />
+      <label for="stream">Stream ID:</label>
+      <input id="stream" type="text" value="mi_stream" style="width:160px" />
+      <button id="connectBtn">Conectar</button>
+      <button id="disconnectBtn" disabled>Desconectar</button>
+    </div>
+
+    <video id="remoteVideo" autoplay playsinline controls></video>
+
+    <div style="margin-top:10px;">
+      <div id="log"></div>
+    </div>
+  </div>
+
+<script>
+/* TL;DR: cliente que imita receiver.py en navegador */
+const serverInput = document.getElementById('server');
+const streamInput = document.getElementById('stream');
+const connectBtn = document.getElementById('connectBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
+const videoEl = document.getElementById('remoteVideo');
+const logEl = document.getElementById('log');
+
+let ws = null;
+let pc = null;
+let streamId = null;
+let serverUrl = null;
+
+function log(...args) {
+  const txt = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+  const line = `[${new Date().toLocaleTimeString()}] ${txt}`;
+  logEl.textContent += line + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+  console.log(...args);
+}
+
+function safeClosePc() {
+  if (pc) {
+    try { pc.close(); } catch (e) {}
+    pc = null;
+  }
+  videoEl.srcObject = null;
+}
+
+function safeCloseWs() {
+  if (ws) {
+    try { ws.close(); } catch (e) {}
+    ws = null;
+  }
+}
+
+/* Crear y preparar PeerConnection */
+function createPeerConnection() {
+  const config = {}; // si necesitas STUN/TURN, añadir {iceServers: [...]}
+  pc = new RTCPeerConnection(config);
+
+  pc.ontrack = (evt) => {
+    log("ontrack", evt.streams?.[0] ? "stream attached" : evt);
+    // asume la primera stream
+    if (evt.streams && evt.streams[0]) {
+      videoEl.srcObject = evt.streams[0];
+    } else {
+      // en algunos navegadores el stream viene en event.track
+      const ms = new MediaStream();
+      ms.addTrack(evt.track);
+      videoEl.srcObject = ms;
+    }
+  };
+
+  pc.onicecandidate = (evt) => {
+    if (!evt.candidate) {
+      log("ICE gathering finished (null candidate)");
+      return;
+    }
+    log("Local ICE candidate -> enviar por WS", evt.candidate);
+    // enviar candidate al servidor proxy para que reenvíe al sender
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: "candidate",
+        role: "receiver",
+        stream_id: streamId,
+        candidate: evt.candidate.toJSON()
+      }));
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    log("pc connectionState:", pc.connectionState);
+    if (pc.connectionState === 'failed' || pc.connectionState === 'closed' || pc.connectionState === 'disconnected') {
+      // cleanup opcional
+      // safeClosePc();
+    }
+  };
+
+  return pc;
+}
+
+/* Manejar mensajes entrantes por WebSocket */
+async function handleWsMessage(evt) {
+  let data;
+  try { data = JSON.parse(evt.data); } catch(e){ log("WS: mensaje no JSON", evt.data); return; }
+
+  // solo procesamos mensajes del sender
+  if (data.role !== 'sender') {
+    log("WS: mensaje ignorado (no sender)", data.role);
+    return;
+  }
+
+  if (data.type === 'sdp') {
+    log("Offer recibida desde sender (sdp_type):", data.sdp_type);
+    try {
+      const desc = { type: data.sdp_type, sdp: data.sdp };
+      await pc.setRemoteDescription(desc);
+      log("Remote description establecida");
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      log("Local answer creada y seteada; enviando answer por WS");
+
+      ws.send(JSON.stringify({
+        type: "sdp",
+        role: "receiver",
+        stream_id: streamId,
+        sdp: pc.localDescription.sdp,
+        sdp_type: pc.localDescription.type
+      }));
+      log("Answer enviada");
+    } catch (err) {
+      log("Error manejando sdp:", err);
+    }
+  } else if (data.type === 'candidate') {
+    if (!data.candidate) {
+      log("Candidate vacío recibido");
+      return;
+    }
+    log("Candidate remoto recibido. Añadiendo a pc:", data.candidate);
+    try {
+      await pc.addIceCandidate(data.candidate);
+      log("Candidate añadido");
+    } catch (err) {
+      log("Error añadiendo candidate:", err);
+    }
+  } else {
+    log("WS: tipo no reconocido:", data.type);
+  }
+}
+
+/* Conectar al WS y preparar PC */
+async function connect() {
+  serverUrl = serverInput.value.trim();
+  streamId = streamInput.value.trim();
+  if (!serverUrl || !streamId) { alert("Rellena server y stream_id"); return; }
+
+  connectBtn.disabled = true;
+  log("Conectando a", serverUrl, "como receiver del stream", streamId);
+
+  try {
+    ws = new WebSocket(serverUrl);
+  } catch (err) {
+    log("Error creando WebSocket:", err);
+    connectBtn.disabled = false;
+    return;
+  }
+
+  ws.onopen = () => {
+    log("WebSocket abierto, registrando como receiver...");
+    // enviar register como en receiver.py
+    ws.send(JSON.stringify({ type: "register", role: "receiver", stream_id: streamId }));
+    // crear pc ahora (antes de recibir offer)
+    createPeerConnection();
+    log("RTCPeerConnection creado, esperando offer...");
+    disconnectBtn.disabled = false;
+  };
+
+  ws.onmessage = handleWsMessage;
+
+  ws.onclose = (e) => {
+    log("WebSocket cerrado", e.code, e.reason);
+    safeClosePc();
+    connectBtn.disabled = false;
+    disconnectBtn.disabled = true;
+  };
+
+  ws.onerror = (ev) => {
+    log("WebSocket error", ev);
+  };
+}
+
+/* Desconexión y limpieza */
+function disconnect() {
+  log("Desconectando...");
+  safeCloseWs();
+  safeClosePc();
+  connectBtn.disabled = false;
+  disconnectBtn.disabled = true;
+}
+
+connectBtn.addEventListener('click', connect);
+disconnectBtn.addEventListener('click', disconnect);
+</script>
+</body>
+</html>

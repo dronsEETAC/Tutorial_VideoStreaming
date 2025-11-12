@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>WebRTC - Stream cámara servidor</title>
+</head>
+<body>
+  <h2>Vídeo recibido del servidor (WebRTC)</h2>
+  <video id="remoteVideo" autoplay playsinline muted></video>
+
+  <br>
+  <button id="startBtn">Iniciar</button>
+  <button id="stopBtn" disabled>Detener</button>
+  <pre id="log"></pre>
+
+<script>
+    //<video id="remoteVideo" autoplay playsinline controls style="width:80%;background:#000"></video>
+const logEl = document.getElementById("log");
+function log(msg){ console.log(msg); logEl.textContent += msg + "\n"; }
+
+const remoteVideo = document.getElementById("remoteVideo");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+
+let pc = null;
+
+startBtn.onclick = async () => {
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  pc = new RTCPeerConnection();
+
+  // 🔥 IMPORTANTE: indicar que el cliente quiere recibir vídeo
+  pc.addTransceiver("video", { direction: "recvonly" });
+
+  pc.ontrack = (event) => {
+    log("Recibido track remoto");
+    console.log ("recibo frame");
+    remoteVideo.srcObject = event.streams[0];
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  log("Enviando offer al servidor...");
+  const response = await fetch("/offer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sdp: pc.localDescription.sdp,
+      type: pc.localDescription.type
+    })
+  });
+
+  const answer = await response.json();
+  await pc.setRemoteDescription(answer);
+  log("✅ Conexión establecida, recibiendo vídeo...");
+};
+
+stopBtn.onclick = async () => {
+  if (pc) {
+    pc.close();
+    pc = null;
+    remoteVideo.srcObject = null;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    log("Conexión cerrada");
+  }
+};
+</script>
+</body>
+</html>

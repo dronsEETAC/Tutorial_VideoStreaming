@@ -24,7 +24,6 @@ class CameraVideoTrack(VideoStreamTrack):
         avf = VideoFrame.from_ndarray(frame, format="rgb24")
         avf.pts = pts
         avf.time_base = time_base
-        print ("Envio")
         return avf
 
 async def run(server_url: str, stream_id: str):
@@ -36,13 +35,6 @@ async def run(server_url: str, stream_id: str):
         await ws.send(json.dumps({"type": "register", "role": "sender", "stream_id": stream_id}))
         print("Registrado como sender")
 
-        # ICE -> enviar candidates al peer vía signaling
-        @pc.on("icecandidate")
-        async def on_icecandidate(candidate):
-            print ("En icecandidate")
-            if candidate:
-                print("Candidate")
-                await ws.send(json.dumps({"type": "candidate", "role": "sender", "stream_id": stream_id, "candidate": candidate.to_dict()}))
 
         # crear offer
         offer = await pc.createOffer()
@@ -60,9 +52,7 @@ async def run(server_url: str, stream_id: str):
                 desc = RTCSessionDescription(sdp=data["sdp"], type=data["sdp_type"])
                 await pc.setRemoteDescription(desc)
                 print("Answer recibida y aplicada")
-            elif data.get("type") == "candidate":
-                await pc.addIceCandidate(data["candidate"])
-                print("Candidate recibido y añadido")
+
 
 
 if __name__ == "__main__":
@@ -70,7 +60,7 @@ if __name__ == "__main__":
 
     # Poner la IP pública de la máquina
     # en la que se ejecuta el proxy
-    server = sys.argv[1] if len(sys.argv) > 1 else "ws://127.0.0.1:8107"
+    server = sys.argv[1] if len(sys.argv) > 1 else "ws://127.0.0.1:8108"
     #server = sys.argv[1] if len(sys.argv) > 1 else "ws://dronseetac.upc.edu:8107"
     #server = sys.argv[1] if len(sys.argv) > 1 else "ws://IP_Proxy:8107"
     sid = sys.argv[2] if len(sys.argv) > 2 else "mi_stream"

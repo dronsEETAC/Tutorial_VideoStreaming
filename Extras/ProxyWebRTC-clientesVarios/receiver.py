@@ -12,6 +12,7 @@ async def display_track(track):
     while True:
         frame = await track.recv()
         img = frame.to_ndarray(format="bgr24")
+
         cv2.imshow("Receiver", img)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
@@ -33,7 +34,9 @@ async def run(server_url: str, stream_id: str):
 
         @pc.on("icecandidate")
         async def on_icecandidate(candidate):
+            print ("En on_icecandidate")
             if candidate:
+                print ("candidate")
                 await ws.send(json.dumps({"type": "candidate", "role": "receiver", "stream_id": stream_id, "candidate": candidate.to_dict()}))
 
         async for raw in ws:
@@ -41,6 +44,7 @@ async def run(server_url: str, stream_id: str):
             if data.get("role") != "sender":
                 continue
             if data.get("type") == "sdp":
+                print ("Ha llegado la oferta del emisor")
                 # oferta llegada: aplicarla y crear answer
                 desc = RTCSessionDescription(sdp=data["sdp"], type=data["sdp_type"])
                 await pc.setRemoteDescription(desc)
@@ -58,6 +62,9 @@ if __name__ == "__main__":
 
     # Poner la IP pública de la máquina
     # en la que se ejecuta el proxy
-    server = sys.argv[1] if len(sys.argv) > 1 else "ws://IP_proxy:8107"
+    #server = sys.argv[1] if len(sys.argv) > 1 else "ws://dronseetac.upc.edu:8107"
+    server = sys.argv[1] if len(sys.argv) > 1 else "ws://127.0.0.1:8108"
+
+    #server = sys.argv[1] if len(sys.argv) > 1 else "ws://IP_proxy:8107"
     sid = sys.argv[2] if len(sys.argv) > 2 else "mi_stream"
     asyncio.run(run(server, sid))

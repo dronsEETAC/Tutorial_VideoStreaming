@@ -88,7 +88,7 @@ async def handler(ws):
 
 async def main():
     host = "0.0.0.0"
-    port = 8107
+    port = 8108
     async with serve(handler, host, port):
         logging.info("Signaling server en ws://%s:%d", host, port)
         await asyncio.Future()

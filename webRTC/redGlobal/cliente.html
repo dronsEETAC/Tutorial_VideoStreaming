@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebSocket Proxy Chat</title>
+  <style>
+    body { font-family: sans-serif; background: #111; color: #eee; display: flex; flex-direction: column; align-items: center; }
+    #chat { width: 80%; max-width: 600px; border: 1px solid #444; border-radius: 8px; padding: 10px; background: #222; margin-top: 20px; overflow-y: auto; height: 300px; }
+    #msg { width: 80%; max-width: 600px; margin-top: 10px; padding: 10px; border-radius: 8px; border: none; font-size: 16px; }
+    button { padding: 10px 15px; border: none; border-radius: 8px; margin-top: 10px; background: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background: #45A049; }
+  </style>
+</head>
+<body>
+  <h2>💬 WebSocket Proxy Chat</h2>
+  <div id="chat"></div>
+  <input type="text" id="msg" placeholder="Escribe un mensaje..." />
+  <button id="send">Enviar</button>
+
+  <script>
+    const ws = new WebSocket("ws://127.0.0.1:8108");
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("msg");
+    const btn = document.getElementById("send");
+
+    function addMessage(text, sender = "otro") {
+      const div = document.createElement("div");
+      div.textContent = text;
+      div.style.color = sender === "yo" ? "#0f0" : "#ccc";
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    ws.onopen = () => addMessage("✅ Conectado al servidor WebSocket");
+    ws.onmessage = (event) => addMessage("📩 " + event.data);
+    ws.onclose = () => addMessage("❌ Desconectado del servidor");
+    ws.onerror = (err) => addMessage("⚠️ Error: " + err.message);
+
+    btn.onclick = () => {
+      const text = input.value.trim();
+      if (!text) return;
+      ws.send(text);
+      addMessage("🧍 " + text, "yo");
+      input.value = "";
+    };
+
+    input.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") btn.click();
+    });
+  </script>
+</body>
+</html>

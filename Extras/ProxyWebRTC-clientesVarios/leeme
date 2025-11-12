@@ -1,0 +1,3 @@
+El proxy minimo lo unico que hace es reenviar lo que recibe por el socket a los conectados
+El sender envia el videostream por WebRTC al que se conecta
+Se puede conectar el receiver en html o el receiver python

@@ -25,6 +25,7 @@ def ws(ws):
             frame_data = ws.receive()
             if frame_data is None:
                 break
+            print ("He recibido algo")
             # reenviar a todos los clientes conectados (excepto el emisor)
             for client in list(clients):
                 try:
