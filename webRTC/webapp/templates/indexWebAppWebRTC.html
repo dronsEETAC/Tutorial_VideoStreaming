@@ -21,8 +21,7 @@
 
   <div class="panel">
     <div class="row">
-      <label for="server">WebSocket server:</label>
-      <input id="server" type="text" value="ws://127.0.0.1:8108" style="flex:1" />
+
       <label for="stream">Stream ID:</label>
       <input id="stream" type="text" value="mi_stream" style="width:160px" />
       <button id="connectBtn">Conectar</button>
@@ -38,12 +37,13 @@
 
 <script>
 /* TL;DR: cliente que imita receiver.py en navegador */
-const serverInput = document.getElementById('server');
+
 const streamInput = document.getElementById('stream');
 const connectBtn = document.getElementById('connectBtn');
 const disconnectBtn = document.getElementById('disconnectBtn');
 const videoEl = document.getElementById('remoteVideo');
 const logEl = document.getElementById('log');
+
 
 let ws = null;
 let pc = null;
@@ -135,7 +135,7 @@ async function handleWsMessage(evt) {
 
 /* Conectar al WS y preparar PC */
 async function connect() {
-  serverUrl = serverInput.value.trim();
+  serverUrl = "ws://" + window.location.hostname + ":8108";
   streamId = streamInput.value.trim();
   if (!serverUrl || !streamId) { alert("Rellena server y stream_id"); return; }
 

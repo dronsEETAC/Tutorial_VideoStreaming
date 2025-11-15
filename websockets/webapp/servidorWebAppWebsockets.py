@@ -11,7 +11,7 @@ clients = set()  # navegadores conectados
 
 @app.route("/")
 def index():
-    return render_template("indexWebAppWebRTC.html")
+    return render_template("indexWebAppWebsockets.html")
 
 @sock.route("/ws")
 def ws(ws):
@@ -45,4 +45,4 @@ def viewer(ws):
         clients.remove(ws)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5002)

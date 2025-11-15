@@ -1,0 +1,10 @@
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\bin\Debug\Receptor.exe.config
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\bin\Debug\Receptor.exe
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\bin\Debug\Receptor.pdb
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.csproj.AssemblyReference.cache
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.Form1.resources
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.Properties.Resources.resources
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.csproj.GenerateResource.cache
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.csproj.CoreCompileInputs.cache
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.exe
+C:\Users\Miguel\Documents\Miguel\DEE\videoStreaming\Extras\ReceptorWebRTCGlobalCs\Receptor\Receptor\obj\Debug\Receptor.pdb

@@ -72,11 +72,10 @@ def main():
     print("🔄 Iniciando servidor WebSocket en segundo plano...")
 
     # Iniciar servidor Flask
-    print("🌐 Iniciando servidor Flask en http://127.0.0.1:5000")
-    print("📱 Accede a http://127.0.0.1:5000 para usar la aplicación")
-    print("📊 Ver estado en http://127.0.0.1:5000/status")
+    print("🌐 Iniciando servidor Flask en http://127.0.0.1:5003")
+
     print ("ATENCION: poner en marcha el cliente antes de poner en marcha en emisor del video")
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5003, debug=False)
 
 
 if __name__ == "__main__":
