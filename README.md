@@ -127,3 +127,9 @@ Esta es una webapp que sirve al cliente el stream de video que el propio servido
 ### 5.2 ProxyWebRTC-clientesVarios    
 Aquí tenemos un programa en python que hace de proxy para facilitar la comunicación entre emisor y receptor. Este proxy NO es una web app. Simplemente permite que emisor y receptos puedan ponerse de acuerdo a través del proxy que naturalmente debe tener una IP publica. Hay dos tipos de receptores. Uno es un programa en python y otro es un HTML+javascript que se ejecuta usando un navegador.   
 
+### 5.3 ReceptorWebRTCGlobalCs    
+Este caso si puede ser de aplicación en el contexto del ecosistema porque se trata de recibir el video stream por WebRTC y mostrarlo en un formulario en C#. De momento, no sabemos cómo hacer para recibir el stream directamente en el formulario, pero si sabemos hacer que lo reciba un script de python y éste lo envie al formulario mediante un socket interno. Eso es lo que hay implementado en esta carpeta.   
+
+Hay que poner en marcha el proxyWebRTC, entonces poner en marcha el formulario C#, que esta en la carpeta Receptor, y después poner en marcha el senderGlobalWebRTC. El formulario pondrá en marcha el script receiverParaCs, que es prácticamente igual al receiverGlobalWebRTC, pero con los cambios necesarios para enviar los frames al formulario, en lugar de mostrarlos en una ventana de OpenCV.   
+
+
