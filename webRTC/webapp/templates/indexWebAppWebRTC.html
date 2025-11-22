@@ -95,16 +95,13 @@ function createPeerConnection() {
   return pc;
 }
 
+
+
+
 /* Manejar mensajes entrantes por WebSocket */
 async function handleWsMessage(evt) {
   let data;
   try { data = JSON.parse(evt.data); } catch(e){ log("WS: mensaje no JSON", evt.data); return; }
-
-  // solo procesamos mensajes del sender
-  if (data.role !== 'sender') {
-    log("WS: mensaje ignorado (no sender)", data.role);
-    return;
-  }
 
   if (data.type === 'sdp') {
     log("Offer recibida desde sender (sdp_type):", data.sdp_type);
@@ -155,7 +152,10 @@ async function connect() {
 
     // crear pc ahora (antes de recibir offer)
     createPeerConnection();
-    log("RTCPeerConnection creado, esperando offer...");
+     ws.send(JSON.stringify({
+        type: "peticion"
+      }));
+    log("RTCPeerConnection creado, registrado en el servidor y esperando offer...");
     disconnectBtn.disabled = false;
   };
 

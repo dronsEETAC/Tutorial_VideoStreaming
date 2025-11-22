@@ -98,7 +98,7 @@ async def run(pc, signaling):
 
 async def main():
     # el receptor actua de cliente que debe conectarse al emisor que actua de servidor
-    IP_server = "IP del servidor en la red de área local"
+    IP_server = "localhost"
     signaling = TcpSocketSignaling(IP_server, 9999)
     pc = RTCPeerConnection()
 

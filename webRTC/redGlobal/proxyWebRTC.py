@@ -5,92 +5,70 @@ import logging
 #from websockets import serve, WebSocketServerProtocol
 from websockets import serve
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-clients = {}  # stream_id -> {"sender": ws, "receiver": ws, "queue": [msg,...]}
-
-async def send_or_queue(stream_id: str, target_role: str, msg: str):
-    """Enviar msg al peer si está conectado; si no, encolarlo."""
-    entry = clients.setdefault(stream_id, {"sender": None, "receiver": None, "queue": []})
-    peer = entry.get(target_role)
-    is_open = peer and not getattr(getattr(peer, "closed_event", None), "is_set", lambda: False)()
-    if is_open:
-        try:
-            await peer.send(msg)
-            logging.info("Reenviado msg a %s/%s (stream=%s)", target_role, getattr(peer, "remote_address", None), stream_id)
-            return True
-        except Exception as e:
-            logging.warning("Error enviando a peer %s: %s — encolando", target_role, e)
-    # encolar si no está abierto
-    entry["queue"].append(msg)
-    logging.info("Peer %s no conectado -> mensaje encolado (stream=%s). Cola tamaño=%d", target_role, stream_id, len(entry["queue"]))
-    return False
-
+receptores = []
+wsEmisor = None
 
 async def handler(ws):
+    global wsEmisor, receptores
     """Handler compatible con websockets >=12.x"""
     path = getattr(ws.request, "path", "/")  # obtener path si se necesita
     ws.max_size = None
     remote = ws.remote_address
-    logging.info("Nueva conexión %s (path=%s)", remote, path)
-    stream_id = None
-    role = None
-    try:
-        async for raw in ws:
-            try:
-                data = json.loads(raw)
-            except Exception:
-                logging.warning("Mensaje no-JSON de %s: %s", remote, repr(raw)[:200])
-                continue
+    print ("Nueva conexión %s (path=%s)", remote, path)
 
-            # Registro inicial
-            if "role" in data and "stream_id" in data and data.get("type") == "register":
-                role = data["role"]
-                stream_id = str(data["stream_id"])
-                entry = clients.setdefault(stream_id, {"sender": None, "receiver": None, "queue": []})
-                entry[role] = ws
-                logging.info("Registro: %s conectado como %s (stream=%s)", remote, role, stream_id)
 
-                # enviar cola de mensajes si los hay
-                if entry["queue"]:
-                    logging.info("Enviando %d mensajes encolados a %s (stream=%s)", len(entry["queue"]), role, stream_id)
-                    for queued in entry["queue"]:
-                        try:
-                            await ws.send(queued)
-                        except Exception as e:
-                            logging.warning("Error enviando mensaje encolado a %s: %s", role, e)
-                    entry["queue"].clear()
-                continue
+    async for raw in ws:
+            print ("Recibo algo")
+            data = json.loads(raw)
 
-            # Validación mínima
-            if stream_id is None or role is None:
-                await ws.send(json.dumps({"error": "Debe registrarse primero con type:'register'"}))
-                continue
+            if data.get("type") == "registro" and data.get("role") == "emisor":
+                print ("Es el emisor que se registra")
+                wsEmisor = ws
+                if len (receptores) > 0:
+                    print ("Hay receptores esperando")
+                    for indice, receptor in enumerate(receptores):
+                        print("Aviso al emisor para que prepare una oferta para este cliente: ", indice)
+                        await wsEmisor.send(json.dumps({
+                            "type": "receptor",
+                            "id": indice
+                        }))
 
-            # Enviar al otro peer
-            peer_role = "receiver" if role == "sender" else "sender"
-            await send_or_queue(stream_id, peer_role, json.dumps(data))
+            if data.get("type") == "peticion":
+                print ("Es una petición de recepción")
+                receptores.append(ws)
+                if wsEmisor:
+                    print ("El emisor ya está registrado")
+                    indice = len(receptores)-1
+                    print ("Aviso al emisor para que prepare una oferta para este cliente: ", indice)
+                    await wsEmisor.send(json.dumps({
+                        "type": "receptor",
+                        "id": indice
+                    }))
+                else:
+                    print ("El emisor aun no se ha conectado")
 
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:
-        logging.exception("Error en handler para %s: %s", remote, e)
-    finally:
-        # Limpieza al desconectarse
-        if stream_id and role:
-            entry = clients.get(stream_id)
-            if entry and entry.get(role) is ws:
-                entry[role] = None
-            if entry and not entry.get("sender") and not entry.get("receiver") and not entry.get("queue"):
-                clients.pop(stream_id, None)
-        logging.info("Conexión cerrada %s (stream=%s role=%s)", remote, stream_id, role)
+            if data.get("type") == "sdp" and data.get("role") == "emisor":
+                id = data.get("id")
+                print ("Recibo una oferta para el cliente: ",data.get("id") )
+                cliente = receptores[id]
+                await cliente.send (raw)
+                print("He re-enviado la oferta al cliente implicado")
+
+            elif data.get("type") == "sdp" and data.get("role") == "receiver":
+                id = receptores.index (ws)
+                print ("Recibo aceptación del receptor: ", id)
+                print ("Agrego el id al mensaje, que re-trasmito al emisor")
+                data["id"] = id
+                await wsEmisor.send(json.dumps(data))
+                print ("Aceptación enviada al emisor")
 
 
 async def main():
     host = "0.0.0.0"
     port = 8108
     async with serve(handler, host, port):
-        logging.info("Signaling server en ws://%s:%d", host, port)
+        print ("Proxy en marcha en:", host, port)
         await asyncio.Future()
 
 if __name__ == "__main__":
