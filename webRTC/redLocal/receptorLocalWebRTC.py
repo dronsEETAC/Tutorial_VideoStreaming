@@ -1,99 +1,23 @@
 import asyncio
+import json
+
 import cv2
 import numpy as np
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.contrib.signaling import TcpSocketSignaling
 from av import VideoFrame
 from datetime import datetime, timedelta
+from websockets import connect
 
+async def display_track(track):
+    while True:
+        frame = await track.recv()
+        img = frame.to_ndarray(format="bgr24")
 
-class VideoReceiver:
-    def __init__(self):
-        self.track = None
-
-    async def handle_track(self, track):
-        print("Inside handle track")
-        self.track = track
-        frame_count = 0
-        while True:
-            try:
-                print("Waiting for frame...")
-                frame = await asyncio.wait_for(track.recv(), timeout=5.0)
-                frame_count += 1
-                print(f"Received frame {frame_count}")
-
-                if isinstance(frame, VideoFrame):
-                    print(f"Frame type: VideoFrame, pts: {frame.pts}, time_base: {frame.time_base}")
-                    frame = frame.to_ndarray(format="bgr24")
-                elif isinstance(frame, np.ndarray):
-                    print(f"Frame type: numpy array")
-                else:
-                    print(f"Unexpected frame type: {type(frame)}")
-                    continue
-
-                # Add timestamp to the frame
-                current_time = datetime.now()
-                new_time = current_time - timedelta(seconds=55)
-                timestamp = new_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                cv2.putText(frame, timestamp, (10, frame.shape[0] - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2,
-                            cv2.LINE_AA)
-                cv2.imwrite(f"imgs/received_frame_{frame_count}.jpg", frame)
-                print(f"Saved frame {frame_count} to file")
-                cv2.imshow("Frame", frame)
-
-                # Exit on 'q' key press
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            except asyncio.TimeoutError:
-                print("Timeout waiting for frame, continuing...")
-            except Exception as e:
-                print(f"Error in handle_track: {str(e)}")
-                if "Connection" in str(e):
-                    break
-        print("Exiting handle_track")
-
-
-async def run(pc, signaling):
-    await signaling.connect()
-
-    @pc.on("track")
-    def on_track(track):
-        if isinstance(track, MediaStreamTrack):
-            print(f"Receiving {track.kind} track")
-            asyncio.ensure_future(video_receiver.handle_track(track))
-
-    @pc.on("datachannel")
-    def on_datachannel(channel):
-        print(f"Data channel established: {channel.label}")
-
-    @pc.on("connectionstatechange")
-    async def on_connectionstatechange():
-        print(f"Connection state is {pc.connectionState}")
-        if pc.connectionState == "connected":
-            print("WebRTC connection established successfully")
-
-    print("Waiting for offer from sender...")
-    offer = await signaling.receive()
-    print("Offer received")
-    await pc.setRemoteDescription(offer)
-    print("Remote description set")
-
-    answer = await pc.createAnswer()
-    print("Answer created")
-    await pc.setLocalDescription(answer)
-    print("Local description set")
-
-    await signaling.send(pc.localDescription)
-    print("Answer sent to sender")
-
-    print("Waiting for connection to be established...")
-    while pc.connectionState != "connected":
-        await asyncio.sleep(0.1)
-
-    print("Connection established, waiting for frames...")
-    await asyncio.sleep(100)  # Wait for 35 seconds to receive frames
-
-    print("Closing connection")
+        cv2.imshow("Receiver", img)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+    cv2.destroyAllWindows()
 
 
 async def main():
@@ -112,7 +36,33 @@ async def main():
     finally:
         print("Closing peer connection")
         await pc.close()
+async def main (websocket_url: str):
+    pc = RTCPeerConnection()
+    print ("He creado la estructura de datos")
+
+    @pc.on("track")
+    def on_track(track):
+        print("Track recibido:", track.kind)
+        if track.kind == "video":
+            asyncio.create_task(display_track(track))
+
+    async with connect(websocket_url) as ws:
+        print ("Ya estoy conectado al emisor. Espero una oferta ...")
+
+        async for raw in ws:
+            print ("Recibo algo del emisor")
+            data = json.loads(raw)
+            if data.get("type") == "sdp":
+                print ("Es la oferta del emisor")
+                desc = RTCSessionDescription(sdp=data["sdp"], type=data["sdp_type"])
+                await pc.setRemoteDescription(desc)
+                answer = await pc.createAnswer()
+                await pc.setLocalDescription(answer)
+                print ("Ya tengo preparada la respuesta")
+                await ws.send(json.dumps({"type": "sdp",  "sdp": pc.localDescription.sdp, "sdp_type": pc.localDescription.type}))
+                print("Respuesta enviada")
+
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main("ws://127.0.0.1:9999"))

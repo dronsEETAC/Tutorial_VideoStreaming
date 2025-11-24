@@ -9,7 +9,8 @@ import websockets
 
 # Poner la IP pública de la máquina
 # en la que se ejecuta el proxy
-PROXY_URL = "ws://IP-proxy:8000/stream"
+# en el path le digo que soy receptor
+PROXY_URL = "ws://IP-proxy:8000/receptor"
 
 async def receive_video():
     async with websockets.connect(PROXY_URL, max_size=None) as ws:
@@ -22,7 +23,7 @@ async def receive_video():
                 frame = cv2.imdecode(npimg, 1)
 
                 if frame is not None:
-                    cv2.imshow("Receptor", frame)
+                    cv2.imshow("Receptor1", frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break

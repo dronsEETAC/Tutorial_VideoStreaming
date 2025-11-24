@@ -12,11 +12,13 @@ async def send_video():
     uri = f"ws://{SERVER_IP}:{PORT}"
     print(f"📡 Conectando a {uri}...")
     async with websockets.connect(uri) as websocket:
+        print ("Ya me he conectado al receptor. Preparando la cámara ...")
         cap = cv2.VideoCapture(0)
+
         if not cap.isOpened():
             print("❌ No se pudo abrir la cámara.")
             return
-
+        print ("Camara preparada")
         print("🎥 Enviando video... presiona 'q' para salir.")
         while True:
             ret, frame = cap.read()

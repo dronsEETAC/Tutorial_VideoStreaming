@@ -13,13 +13,9 @@ clients = set()  # navegadores conectados
 def index():
     return render_template("indexWebAppWebsockets.html")
 
-@sock.route("/ws")
+@sock.route("/emisor")
 def ws(ws):
-    """
-    Recibe frames del emisor y los reenvía a todos los clientes web
-    """
-    # Detectar si ws es emisor o navegador
-    remote = ws.environ.get("REMOTE_ADDR")
+    print (" Se ha conectado el emisor")
     try:
         while True:
             frame_data = ws.receive()
@@ -34,9 +30,9 @@ def ws(ws):
     except:
         pass
 
-@sock.route("/viewer")
+@sock.route("/receptor")
 def viewer(ws):
-    """Clientes web que quieren ver video"""
+    print ("Se ha conectado un receptor")
     clients.add(ws)
     try:
         while True:

@@ -25,11 +25,7 @@ def index():
 
 async def handler(ws):
     global wsEmisor, receptores
-    """Handler compatible con websockets >=12.x"""
-    path = getattr(ws.request, "path", "/")  # obtener path si se necesita
-    ws.max_size = None
-    remote = ws.remote_address
-    print ("Nueva conexión %s (path=%s)", remote, path)
+    print ("Se ha conectado alguien")
 
 
     async for raw in ws:

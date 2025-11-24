@@ -8,7 +8,7 @@
     <h1>Video en tiempo real</h1>
     <img id="video" width="640" height="480"/>
     <script>
-        const ws = new WebSocket("ws://" + window.location.host + "/viewer");
+        const ws = new WebSocket("ws://" + window.location.host + "/receptor");
         const videoEl = document.getElementById("video");
 
         ws.onmessage = function(event) {

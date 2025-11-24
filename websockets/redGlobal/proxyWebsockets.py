@@ -3,22 +3,25 @@
 import asyncio
 import websockets
 
+
 emitters = set()
 receivers = set()
 
 async def handle_emitter(websocket):
-    """Recibe frames del emisor y los reenvía a los receptores"""
+    # añado el emisor a la lista de emisores
     emitters.add(websocket)
     print("[INFO] Emisor conectado.")
     try:
         async for frame_data in websocket:
             dead_receivers = set()
-            print ("Recibo frame")
+            print ("Recibo frame y se lo envío a los receptores")
             for r in receivers:
                 try:
                     await r.send(frame_data)
                 except:
+                    # este receptor está desconectado
                     dead_receivers.add(r)
+            # actualizo la lista de receptores eliminando los que se han desconectado
             receivers.difference_update(dead_receivers)
     except Exception as e:
         print(f"[WARN] Emisor desconectado: {e}")
@@ -27,7 +30,8 @@ async def handle_emitter(websocket):
         print("[INFO] Emisor eliminado.")
 
 async def handle_receiver(websocket):
-    """Conecta un nuevo receptor"""
+    # se ha conectado un receptor
+    # lo añado a la lista de receptores
     receivers.add(websocket)
     print(f"[INFO] Receptor conectado. Total: {len(receivers)}")
     try:
@@ -37,11 +41,7 @@ async def handle_receiver(websocket):
         print("[INFO] Receptor desconectado.")
 
 async def handler(websocket, path=None):
-    """
-    Rutea según el endpoint del WebSocket.
-    Compatible con websockets 10.x → usa 'path'
-    y con websockets 12.x → usa 'websocket.request.path'
-    """
+    # tengo que averiguar si se ha conectado un emisor o un receptor
     try:
         # websockets >=12.x usa websocket.request.path
         current_path = getattr(websocket, "request", None)
@@ -53,9 +53,11 @@ async def handler(websocket, path=None):
     if not path:
         path = "/"
 
-    if path == "/stream":
+    if path == "/emisor":
+        # se ha conectado un emisor
         await handle_emitter(websocket)
-    elif path == "/viewer":
+    elif path == "/receptor":
+        # se ha conectado un receptor
         await handle_receiver(websocket)
     else:
         print(f"[WARN] Ruta desconocida: {path}")

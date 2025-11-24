@@ -8,10 +8,13 @@ import websockets
 
 # Poner la IP pública de la máquina
 # en la que se ejecuta el proxy
-PROXY_URL = "ws://IP-proxy:8000/stream"
+# en el propio path indico que soy emisor
+PROXY_URL = "ws://IP-proxy:8000/emisor"
 
 async def send_video():
+    print ("Preparando cámara ...")
     cap = cv2.VideoCapture(0)
+    print ("Cámara preparada")
     try:
         async with websockets.connect(PROXY_URL, max_size=None) as ws:
             print("[INFO] Conectado al proxy.")

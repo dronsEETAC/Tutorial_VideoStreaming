@@ -5,9 +5,11 @@ import asyncio
 import websockets
 
 FLASK_WS_URL = "ws://147.83.249.79:8107/ws"  # Cambia IP o dominio
-FLASK_WS_URL = "ws://127.0.0.1:5002/ws"  # Cambia IP o dominio
+FLASK_WS_URL = "ws://127.0.0.1:5002/emisor"  # Cambia IP o dominio
 async def send_video():
+    print ("Preparando cámara ...")
     cap = cv2.VideoCapture(0)
+    print ("Cámara preparada")
     try:
         async with websockets.connect(FLASK_WS_URL, max_size=None) as ws:
             print("[INFO] Conectado al servidor Flask")
@@ -15,12 +17,11 @@ async def send_video():
                 ret, frame = cap.read()
                 if not ret:
                     break
-
-                _, buffer = cv2.imencode(".jpg", frame)
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
                 b64frame = base64.b64encode(buffer).decode("utf-8")
 
                 await ws.send(b64frame)
-                await asyncio.sleep(0.05)  # ~20 FPS
+                await asyncio.sleep(0.1)  # ~10 FPS
     except Exception as e:
         print("[ERROR]", e)
     finally:
