@@ -7,7 +7,7 @@ La forma de implementar el video streaming depende del escenario concreto. No es
 
 En este tutorial describimos en detalle los diferentes escenarios, protocolos y herramientas. Además, proporcionamos los códigos necesarios para cada caso concreto. En particular consideraremos tres escenarios:   
 
-1. Local: emisor y receptor (o receptores) conectados en la misma red de área local
+1. Local: emisor y receptor (o receptores) conectados en la misma red de área local (LAN)
 2. Global: emisor y receptor (o receptores) conectados a Internet
 3. WebApp: receptor conectado a una WebApp (es un caso particular del anterior)
    
