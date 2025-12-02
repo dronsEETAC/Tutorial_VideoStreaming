@@ -1,13 +1,13 @@
-# Tutorial de videostreaming para el Drone Engineering Ecosystem   
+# Tutorial de video streaming para el Drone Engineering Ecosystem   
 
 ## 1. Introducción
 Una de las aplicaciones más habituales de los drones es la captación de imágenes. Un caso particular es el envío a tierra en tiempo real del stream de video capturado por la cámara del dron.    
 
-La forma de implementar el video streaming depende del escenario concreto. No es lo mismo el caso en el que el emisor del vídeo sea la Raspberry Pi abordo y el receptor sea un portátil conectado a la misma red de área local que el caso en el que tanto el emisor como el receptor están conectados a Internet y físicamente lejos. Además, existen varios protocolos de comunicación y herramientas para implementar video streaming, con sus ventajas en inconvenientes.    
+La forma de implementar el video streaming depende del escenario concreto. No es lo mismo el caso en el que el emisor del vídeo sea la Raspberry Pi abordo y el receptor sea un portátil conectado al punto de acceso de la Raspberry Pi que el caso en el que tanto el emisor como el receptor están conectados a Internet y físicamente lejos. Además, existen varios protocolos de comunicación y herramientas para implementar video streaming, con sus ventajas en inconvenientes.    
 
 En este tutorial describimos en detalle los diferentes escenarios, protocolos y herramientas. Además, proporcionamos los códigos necesarios para cada caso concreto. En particular consideraremos tres escenarios:   
 
-1. Local: emisor y receptor (o receptores) conectados en la misma red de área local
+1. Local: emisor y receptor (o receptores) conectados en la misma red de área local (LAN)
 2. Global: emisor y receptor (o receptores) conectados a Internet
 3. WebApp: receptor conectado a una WebApp (es un caso particular del anterior)
    
@@ -17,7 +17,7 @@ Naturalmente, otro escenario posible, que no se considera aquí, es que el dron 
 
 ## 2. Escenario local   
 
-En este caso, el emisor y el receptor están conectados a la misma red de área local y, por tanto, cada uno puede conectarse directamente con el otro conociendo su dirección IP dentro de la red. Por ejemplo, el emisor puede ser una Raspberry Pi (RPi) abordo del dron con una cámara conectada y el receptor puede ser un portátil que se ha conectado al punto de acceso WiFi ofrecido por la RPi. De hecho, puede haber varios receptores, todos ellos conectados a ese punto de acceso. Veamos la implementación de video streaming usando cada uno de los tres protocolos considerados en este tutorial.   
+En este caso, el emisor y el receptor están conectados a la misma LAN y, por tanto, cada uno puede conectarse directamente con el otro conociendo su dirección IP dentro de la red. Por ejemplo, el emisor puede ser una Raspberry Pi (RPi) abordo del dron con una cámara conectada y el receptor puede ser un portátil que se ha conectado al punto de acceso WiFi ofrecido por la RPi. De hecho, puede haber varios receptores, todos ellos conectados a ese punto de acceso. Veamos la implementación de video streaming usando cada uno de los tres protocolos considerados en este tutorial.   
 
 ### 2.1 MQTT (Message Queuing Telemetry Transport)   
  
@@ -42,27 +42,27 @@ y deben añadirse en ese orden (en el vídeo se añaden en orden contrario). En 
 net stop mosquitto
 net start mosquitto
 ```
-En la carpeta MQTT/Local pueden encontrarse los códigos de un emisor y un receptor. El emisor publica los frames del stream de video en un bróker mosquitto que se ejecuta en el mismo ordenador que el receptor. El receptor se ha suscrito a los frames de vídeo y por tanto los recibe y los muestra al usuario.   
+En la carpeta MQTT/redLocal pueden encontrarse los códigos de un emisor y un receptor. El emisor publica los frames del stream de video en un bróker mosquitto que se ejecuta en el mismo ordenador que el receptor. El receptor se ha suscrito a los frames de vídeo y por tanto los recibe y los muestra al usuario.   
  
 Se observará inmediatamente que la fluidez del vídeo no es ideal, porque MQTT no está pensado para transmisión de datos grandes y frecuentes (como los frames de un stream de video). La fluidez puede ajustarse haciendo que los frames se envíen con menos calidad (menos bytes) y con menos frecuencia. En el código del emisor se indica con comentarios cómo controlar esos dos parámetros.   
  
 ### 2.2 Websockets   
 
-Como ya se ha indicado el protocolo MQTT es ideal para comunicar mensajes cortos y poco frecuentes. Sin embargo, no es el mecanismo ideal para comunicar el stream de video, puesto la gestión que debe realizar el bróker introduce retardos que afectan a la fluidez del vídeo.      
+Como ya se ha indicado el protocolo MQTT es ideal para comunicar mensajes cortos y poco frecuentes. Sin embargo, no es el mecanismo ideal para comunicar el stream de video, puesto la gestión que debe realizar el bróker introduce retardos que afectan a la fluidez del vídeo. Además, MQTT funciona sobre TCP/IP con lo cual se introducen retardos adicionales debido al control de flujo que realiza TCP para que no se pierdan paquetes en la transmisión.      
 
-Una alternativa que mejora la experiencia de usuario es utilizar Websockets para la comunicación del stream de video. Este mecanismo utiliza TCP/IP (igual que MQTT) pero no necesita de la intermediación de ningún bróker. La gestión de la información que viaja es más eficiente que en el caso de MQTT y, por tanto, los retardos son mucho menores y la fluidez mucho mejor.   
+Una alternativa que mejora la experiencia de usuario es utilizar Websockets para la comunicación del stream de video. Este mecanismo utiliza también TCP/IP y, por tanto, incurre en esos retardos debidos al control de flujo, pero no necesita de la intermediación de ningún bróker. La gestión de la información que viaja es más eficiente que en el caso de MQTT y, por tanto, los retardos son mucho menores y la fluidez mucho mejor.   
 
-Cuando se usa una comunicación de Websocket, uno de los agentes implicados (emisor o receptor) debe desempeñar el rol de servidor y el otro el rol de cliente. El servidor crea el websocket y queda a la espera de conexiones. El cliente se conecta al servidor usando la IP de éste en la red de área local. La conexión se realiza utilizando el protocolo HTTP, exactamente igual que haría un navegador para conectarse a una página web (de ahí el término websocket). Una vez realizada la conexión, ésta se mantiene abierta creando un canal de comunicación bidireccional. A partir de ese momento, tanto el servidor como el cliente pueden desempeñar el rol de emisor o de receptor, y el stream de video circula por el canal creado con mayor fluidez que en el caso de MQTT.    
+Cuando se usa una comunicación de Websocket, uno de los agentes implicados (emisor o receptor) debe desempeñar el rol de servidor y el otro el rol de cliente. El servidor crea el websocket y queda a la espera de conexiones. El cliente se conecta al servidor usando la IP de éste en la LAN. La conexión se realiza utilizando el protocolo HTTP, exactamente igual que haría un navegador para conectarse a una página web (de ahí el término websocket). Una vez realizada la conexión, ésta se mantiene abierta creando un canal de comunicación bidireccional. A partir de ese momento, tanto el servidor como el cliente pueden desempeñar el rol de emisor o de receptor del stream de vídeo, que circula por el canal creado con mayor fluidez que en el caso de MQTT.    
  
-En la carpeta Websockets/Local pueden encontrarse los códigos de un emisor y un receptor que utilizan websockets para implementar video streaming. En ese caso, el receptor es el que actúa de servidor del websocket, pero podría ser perfectamente al revés. Se observará que la fluidez es mucho mejor que en el caso de MQTT. No obstante, puede modificarse en el emisor la calidad del frame que se envía y la frecuencia de envío exactamente igual que en el caso del emisor vía MQTT.   
+En la carpeta Websockets/redLocal pueden encontrarse los códigos de un emisor y un receptor que utilizan websockets para implementar video streaming. En ese caso, el receptor es el que actúa de servidor del websocket, pero podría ser perfectamente al revés. Se observará que la fluidez es mucho mejor que en el caso de MQTT. No obstante, puede modificarse en el emisor la calidad del frame que se envía y la frecuencia de envío exactamente igual que en el caso del emisor vía MQTT.   
 
 ### 2.3 WebRTC   
 
-El protocolo Websockets no es tampoco el mecanismo ideal ya que el uso de TCP introduce elementos de control de flujo, como por ejemplo recuperación de paquetes perdidos, que no se requieren en el caso de la trasmisión de video, puesto que la pérdida eventual de frames no necesariamente representa un excesivo perjuicio de la experiencia de usuario. Otros protocolos, como por ejemplo WebRTC, se basan en UDP/IP y, por tanto, no esperan confirmaciones de paquetes, lo cual da como resultado una transmisión de mayor fluidez.    
+El protocolo Websockets no es tampoco el mecanismo ideal ya sigue incurriendo en los retardos propios de TCP debidos al control de flujo y mecanismos de recuperación de paquetes perdidos. Una aplicación de video streaming no requiere de estos mecanismos puesto que la pérdida eventual de frames no necesariamente representa un excesivo perjuicio de la experiencia de usuario. El protocolo WebRTC (Web Real-Time Communication) se basan en UDP/IP y, por tanto, no espera confirmaciones de paquetes, lo cual da como resultado una transmisión de mayor fluidez.    
 
-De nuevo, uno de los agentes implicados (emisor o receptor) debe actuar como servidor y el otro como cliente. El cliente se conecta al servidor usando la IP de éste en la red local. Para establecer la conexión el cliente y servidor intercambian algunos mensajes por websocket. Una vez establecida la conexión el emisor envía el stream de video que llegará al receptor con menor retraso y mejor fluidez, como corresponde al uso de UDP en vez de TCP, aunque con posibles pérdidas de paquetes que, si bien serían inadmisibles si se están enviando instrucciones, no van a afectar significativamente a la experiencia de usuario en el caso de video streaming.    
+De nuevo, uno de los agentes implicados (emisor o receptor) debe actuar como servidor y el otro como cliente. El cliente se conecta al servidor usando la IP de éste en la LAN. Para establecer la conexión el cliente y servidor intercambian algunos mensajes por websocket. Básicamente el emisor del video stream debe enviar por el websocket una oferta y el receptor debe responder con una aceptación. En ese intercambio, emisor y receptor se dan a conocer mutuamente información necesaria para la comunicación del stream de video (por ejemplo, sus IPs dentro de la LAN). Una vez establecida la conexión el emisor envía el stream de video que llegará al receptor con menor retraso y mejor fluidez, como corresponde al uso de UDP en vez de TCP, aunque con posibles pérdidas de paquetes que, si bien serían inadmisibles si se están enviando instrucciones, no van a afectar significativamente a la experiencia de usuario en el caso de video streaming.    
  
-En la carpeta WebRTC/Local pueden encontrarse los códigos de un emisor (que en este caso es el que actúa como servidor) y un receptor que utilizan WebRTC para implementar video streaming.    
+En la carpeta WebRTC/redLocal pueden encontrarse los códigos de un emisor (que en este caso es el que actúa como servidor) y un receptor que utilizan WebRTC para implementar video streaming.    
 
 ## 3. Escenario global   
 
@@ -79,21 +79,29 @@ En este caso, el bróker tiene que estar también conectado a Internet para que 
 |broker.emqx.io    |1883| 8083 |
 
 El puerto TCP que se indica en la tabla es el que debe usarse para una conexión global entre emisor y receptor. El puerto websockets es el que deberá usar la webapp, tal y como se explicará en el apartado 4.1.
-En la carpeta MQTT/Global pueden encontrarse los códigos de un emisor y un receptor que se comunican el stream de video a través de un bróker público y gratuito. Los códigos son exactamente iguales que los del caso del escenario local excepto por lo que respecta a la conexión con el bróker. En los comentarios del código se indica cómo conectarse al resto de brokers públicos mencionados.   
+En la carpeta MQTT/redGlobal pueden encontrarse los códigos de un emisor y un receptor que se comunican el stream de video a través de un bróker público y gratuito. Los códigos son exactamente iguales que los del caso del escenario local excepto por lo que respecta a la conexión con el bróker. En los comentarios del código se indica cómo conectarse al resto de brokers públicos mencionados.   
  
 ### 3.2 Websockets
 
-En un escenario global el emisor y receptor están conectados a Internet pero pertenecen a redes de área local diferentes y no tienen asignadas IP públicas. Por tanto, no es posible establecer una conexión directa entre un cliente y un servidor, tal y como sí es posible en el caso del escenario local.   
+En un escenario global el emisor y receptor están conectados a Internet pero pertenecen a LANs diferentes y no tienen asignadas IP públicas. Por tanto, no es posible establecer una conexión directa entre un cliente y un servidor, tal y como sí es posible en el caso del escenario local.   
 
 En este caso, la comunicación vía Websocket requiere de un proxy que haga de intermediario. El proxy debe estar conectado a internet y tener asignada una IP pública. El proxy actuará de servidor y creará el Websocket de manera que tanto el emisor como el receptor se conectarán al proxy usando la IP pública de éste. Ahora el emisor enviará el video stream al proxy que lo reenviará al receptor.   
  
-En la carpeta Websocket/Global pueden encontrarse los códigos de un emisor, un receptor y un proxy. Es importante tener en cuenta que el proxy debe ejecutarse en un ordenador conectado a internet y con una IP pública para que tanto el emisor como el receptor puedan conectarse.   
+En la carpeta Websocket/redGlobal pueden encontrarse los códigos de un emisor, un receptor y un proxy. Es importante tener en cuenta que el proxy debe ejecutarse en un ordenador conectado a internet y con una IP pública para que tanto el emisor como el receptor puedan conectarse.   
 
 ### 3.3 WebRTC   
 
-Al igual que en el caso de Websockets, si se usa WebRTC en un escenario global es necesaria la intervención de un proxy que hará el rol de servidor al que se conectarán tanto el emisor como el receptor. 
-En la carpeta WebRTC/Global pueden encontrarse los códigos de un emisor, un receptor y un proxy, que también debe ejecutarse en un ordenador con IP pública.    
+Al igual que en el caso de Websockets, si se usa WebRTC en un escenario global es necesaria la intervención de un proxy que hará el rol de servidor al que se conectarán tanto el emisor como el receptor.   
  
+En la carpeta WebRTC/redGlobal pueden encontrarse los códigos de un emisor, un receptor y un proxy, que también debe ejecutarse en un ordenador con IP pública. En la implementación propuesta es posible enviar el stream de video a varios receptores. Para que eso sea posible es necesario que el emisor envíe una oferta a cada uno de los receptores. Por ese motivo, el proxy es algo más complejo ya que tiene que mantener una lista de receptores para avisar al emisor de que se requiere una nueva oferta cada vez que se conecta un receptor y luego poder reenviar la oferta al receptor correspondiente.    
+
+En el caso de que el emisor y el receptor pertenezcan a LANs diferentes, el intercambio de oferta y respuesta no es suficiente para establecer la conexión, puesto que de nada sirve que el emisor conozca la IP del receptor en la LAN de este. Necesita información adicional que le permita alcanzar al receptor en Internet. Para ello, el receptor debe enviar al emisor información sobre la dirección IP pública del router al que esté conectado e información adicional sobre cóomo está conectado el receptor al router. Para obtener esta información el receptor necesita la ayuda de un servidor externo de tipo STUN (Session Traversal Utilities for NAT). Este servidor recopila la información y se la entrega al receptor para que éste la envíe por websocket al emisor a través del proxy (igual que envió la aceptación de la oferta). En realidad, el servidor STUN puede enviar al receptor varias alternativas que denominamos candidatos. Cada candidato es un posible camino para llegar al receptor a través de internat. El receptor enviará al emisor todos los candidatos que le proporcione el servidor STUN. El emisor guardará todos esos candidatos para poder elegir el mejor y realizar la transmisión del stream a través de la opción elegida.    
+
+En el caso de que el receptor pertenezca a una LAN con altos niveles de protección (cortafuegos, etc.), es posible que los candidatos proporcionados por el servidor STUN no permitan la conexión. En esos casos, es necesario uitilizar un servidor de tipo TURN (Traversal Using Relays around NAT). En este caso, los candidatos que proporciona el servidor TURN incluyen el camino que permite que el video stream pase por el propio servidor TURN para que este los retrasmita al receptor (por eso se llaman candidatos de tipo relay). Esta estrategia permite la transmisión en la mayoría de los casos, aunque el éxito no está asegurado porque es posible que el receptor pertenezca a una red en la que está deshabilitadas cierto tipo de recepciones por UDP (eso puede ocurrir en receptores de instituciones oficiales como por ejemplo una Universidad). Naturalmente, el uso de un servidor TURN incurre en ciertos retardos que pueden afectar a la fluidez del video, en comparación con las situaciones en las que no es necesaria su intervención.   
+
+En los códigos proporcionados en la carpeta WebRTC/redGlobal tanto el emisor como el receptor envian candidatos apoyandose en servidores STUN y TURN. En la configuración de la conexión se indica qué servidores van a usarse. Existen muchas opciones gratuitas para servidor STUN. También hay opciones gratuitas para servidores TURN aunque en muchos casos se requiere registrarse en la organiación que los facilita para obtener unas claves de acceso. Una opción recomentada es https://www.metered.ca/tools/openrelay/.   
+
+
 ## 4. WebApp   
 
 Este escenario es un caso particular del escenario global, en el que el cliente es una WebApp. Esto permite que el video stream se reciba en un dispositivo móvil que se ha conectado a la WebApp.   
@@ -112,11 +120,13 @@ En la carpeta MQTT/WebApp se proporcionan los códigos de una WebApp (servidor e
  
 ### 4.2 WebSockets   
  
-En este caso, el servidor web actúa además como proxy para conectar vía websocket el emisor con el receptor (el navegador que se ha conectado a la WebApp). El emisor envía los frames al servidor web vía Websockets y el servidor web reenvía el frame al navegador. En la carpeta Websockets/WebApp se proporcionan los códigos de una WebApp (servidor en Python y template en HTML) que actúa como proxy entre el emisor del stream de video y el cliente que se conecta a la WebAp.    
+En este caso, el servidor web actúa además como proxy para conectar vía websocket el emisor con el receptor (el navegador que se ha conectado a la WebApp). El emisor envía los frames al servidor web vía Websockets y el servidor los reenvía al navegador. En la carpeta Websockets/WebApp se proporcionan los códigos de una WebApp (servidor en Python y template en HTML) que actúa como proxy entre el emisor del stream de video y el cliente que se conecta a la WebAp.    
 
 ### 4.3 WebRTC 
 
-En la carpeta WebRTC/WebApp pueden encontrarse los códigos de una WebApp que facilita la transmisión del stream de video entre un emisor en python y el cliente que se conecta a la Webapp. Como corresponde a la comunicación via WebRTC, el emisor y el cliente interambian mensajes iniciales por websocket a través del servidor, que lo único que hace es hacer de puente entre ambos. Una vez puestos de acuerdo el stream de video fluye desde el emisor al cliente de forma muy fluida.    
+En la carpeta WebRTC/WebApp pueden encontrarse los códigos de una WebApp que facilita la transmisión del stream de video entre un emisor en python y el cliente que se conecta a la Webapp. Como corresponde a la comunicación via WebRTC, el emisor y el cliente interambian mensajes iniciales por websocket a través del servidor, que lo único que hace es hacer de puente entre ambos. Esos mensajes incluyen los candidatos obtenidos de los servidores STUN y TURN, tal y como se ha explicado en el apartado 3.3. Una vez puestos de acuerdo el stream de video fluye desde el emisor al cliente de forma muy fluida. La implementación propuesta también permite que varios clientes reciban el stream simultáneamente.   
+
+Esta opción es la ideal para que el stream de video captado por el dron mientras vuela en el DroneLab pueda ser visto en los dispositivos móviles de los visitantes. En esa situación el portátil en el que se ejecuta el programa emisor del video stream estará conectado a la Wifi del DroneLab. En el caso de que los dispositivos móviles también estén conectados a esa Wifi la transmisión del video se realizará sin intervención de servidores STUN o TURN, y el video se recibirá con gran fluidez. En el caso de los dispositivos móviles que estén conectados a otras redes (por ejemplo, al servicio de datos de su compañía telefónica) será necesaria la intermediación de servidores STUN y muy probablemente TURN, con lo que la fluidez puede verse algo afectada, e incluso es posible que la conexión no pueda establecerse.    
 
 ## 5. Extras     
 En la carpeta de extras hay algunos códigos que no corresponden a ninguno de los escenarios anteriores y no son, por tanto, de aplicación en el ecosistema, pero que han resultado de mucha utilidad como pasos intermedios para la implementación que se ha descrito en el punto 4.3 (que ha sido la más complicada de todas).    
