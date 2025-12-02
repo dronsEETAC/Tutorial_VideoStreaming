@@ -2,11 +2,7 @@ import asyncio
 import json
 
 import cv2
-import numpy as np
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
-from aiortc.contrib.signaling import TcpSocketSignaling
-from av import VideoFrame
-from datetime import datetime, timedelta
 from websockets import connect
 
 async def display_track(track):
@@ -20,22 +16,7 @@ async def display_track(track):
     cv2.destroyAllWindows()
 
 
-async def main():
-    # el receptor actua de cliente que debe conectarse al emisor que actua de servidor
-    IP_server = "localhost"
-    signaling = TcpSocketSignaling(IP_server, 9999)
-    pc = RTCPeerConnection()
 
-    global video_receiver
-    video_receiver = VideoReceiver()
-
-    try:
-        await run(pc, signaling)
-    except Exception as e:
-        print(f"Error in main: {str(e)}")
-    finally:
-        print("Closing peer connection")
-        await pc.close()
 async def main (websocket_url: str):
     pc = RTCPeerConnection()
     print ("He creado la estructura de datos")

@@ -4,7 +4,6 @@ import json
 import cv2
 import websockets
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-from aiortc.contrib.signaling import TcpSocketSignaling
 from av import VideoFrame
 import fractions
 from datetime import datetime
@@ -72,7 +71,7 @@ async def main():
     global video_sender
     HOST = '0.0.0.0'
     PORT = 9999
-    video_sender = CustomVideoStreamTrack(0)
+    video_sender = CustomVideoStreamTrack(1)
     print(f"🖥️ Esperando conexión en ws://{HOST}:{PORT}")
     async with websockets.serve(handle_client, HOST, PORT):
         await asyncio.Future()  # Mantener servidor activo

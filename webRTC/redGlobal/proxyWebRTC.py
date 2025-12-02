@@ -11,11 +11,8 @@ wsEmisor = None
 
 async def handler(ws):
     global wsEmisor, receptores
-    """Handler compatible con websockets >=12.x"""
-    path = getattr(ws.request, "path", "/")  # obtener path si se necesita
-    ws.max_size = None
-    remote = ws.remote_address
-    print ("Nueva conexión %s (path=%s)", remote, path)
+
+    print ("Nueva conexión ")
 
 
     async for raw in ws:
@@ -55,13 +52,29 @@ async def handler(ws):
                 await cliente.send (raw)
                 print("He re-enviado la oferta al cliente implicado")
 
-            elif data.get("type") == "sdp" and data.get("role") == "receiver":
+            elif data.get("type") == "sdp" and data.get("role") == "receptor":
                 id = receptores.index (ws)
                 print ("Recibo aceptación del receptor: ", id)
                 print ("Agrego el id al mensaje, que re-trasmito al emisor")
                 data["id"] = id
                 await wsEmisor.send(json.dumps(data))
                 print ("Aceptación enviada al emisor")
+
+            elif data.get("type") == "ice" and data.get("role") == "receptor":
+                id = receptores.index(ws)
+                print("Recibo ice del receptor: ", id)
+                print("Agrego el id al mensaje, que re-trasmito al emisor")
+                data["id"] = id
+                await wsEmisor.send(json.dumps(data))
+                print("ICE enviado al emisor")
+            elif data.get("type") == "ice" and data.get("role") == "emisor":
+                print("Recibo ice del emisor. Se lo envio a todos los receptores ")
+                for receptor in receptores:
+                    print("Aviso al emisor para que prepare una oferta para este cliente: ", indice)
+                    await receptor.send(raw)
+
+
+
 
 
 async def main():

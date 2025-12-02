@@ -71,5 +71,6 @@ if __name__ == "__main__":
     cameraTrack = CameraVideoTrack()
     import sys
     server = "ws://127.0.0.1:8108"
+    server = "ws://dronseetac.upc.edu:8108"
     sid = "mi_stream"
     asyncio.run(run(server, sid))
