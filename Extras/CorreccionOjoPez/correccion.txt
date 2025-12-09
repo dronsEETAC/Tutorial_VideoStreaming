@@ -1,0 +1,54 @@
+
+Puedes corregir la distorsión con cv2.undistort() en OpenCV, pero necesitas calibrar la cámara primero para obtener sus parámetros intrínsecos y de distorsión.
+
+📷 Paso 1: Calibrar la cámara
+Captura un conjunto de imágenes (10-20) de un patrón de calibración (generalmente un tablero de ajedrez) desde distintos ángulos y posiciones. Luego usa el siguiente script de calibración:
+
+
+import cv2
+import numpy as np
+import glob
+
+# Tamaño del patrón (número de esquinas internas)
+pattern_size = (9, 6)
+objp = np.zeros((pattern_size[0]*pattern_size[1],3), np.float32)
+objp[:,:2] = np.mgrid[0:pattern_size[0], 0:pattern_size[1]].T.reshape(-1,2)
+
+objpoints = []
+imgpoints = []
+
+images = glob.glob('calib_images/*.jpg')
+
+for fname in images:
+    img = cv2.imread(fname)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    ret, corners = cv2.findChessboardCorners(gray, pattern_size, None)
+    if ret:
+        objpoints.append(objp)
+        imgpoints.append(corners)
+
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+
+# Guarda los parámetros
+np.savez('camera_calib.npz', mtx=mtx, dist=dist)
+
+
+📷 Paso 2: Corregir distorsión
+Una vez tengas los parámetros mtx (matriz intrínseca) y dist (coeficientes de distorsión):
+
+
+
+import cv2
+import numpy as np
+
+data = np.load('camera_calib.npz')
+mtx, dist = data['mtx'], data['dist']
+
+img = cv2.imread('imagen_gran_angular.jpg')
+h, w = img.shape[:2]
+newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
+
+undistorted = cv2.undistort(img, mtx, dist, None, newcameramtx)
+
+cv2.imwrite('undistorted.jpg', undistorted)
+

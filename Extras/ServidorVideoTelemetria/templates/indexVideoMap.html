@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebRTC — Mapa + Vídeo</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+  html,body { height:100%; margin:0; background:#000; color:#fff; font-family:Arial, sans-serif; }
+  /* Tabs */
+  #tabs { display:flex; height:44px; }
+  .tabButton { flex:1; background:#222; color:#fff; border:none; cursor:pointer; font-weight:700; }
+  .tabButton.active { background:#007BFF; }
+
+  /* Tab contents */
+  .tabContent { display:none; width:100vw; height:calc(100vh - 44px); position:relative; }
+  .tabContent.active { display:block; }
+
+  /* MAP */
+  #map { width:100%; height:100%; }
+
+  /* VIDEO */
+  #video { width:100%; height:100%; object-fit:cover; background:black; display:block; }
+
+  /* Controls (in video tab) */
+  .controls {
+    position:absolute;
+    right:12px;
+    bottom:20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    z-index:9999;
+    background: rgba(0,0,0,0.25);
+    padding:10px;
+    border-radius:10px;
+  }
+  .btn {
+    width:110px;
+    padding:10px;
+    border-radius:10px;
+    border:none;
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+    font-size:14px;
+  }
+  #connectBtn { background:#007BFF; }
+  #photoBtn { background:#ff4444; }
+  #recordBtn { background:#8B4513; }
+
+  /* Recording indicator (circle) */
+  .recIndicator {
+    width:14px; height:14px; border-radius:50%;
+    background:red; box-shadow:0 0 6px rgba(255,0,0,0.9);
+    display:none; align-self:center;
+  }
+
+  /* Small adjustments for mobile */
+  @media (max-width:600px) {
+    .btn { width:90px; font-size:13px; padding:8px; }
+    .controls { right:8px; bottom:12px; gap:8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TABS -->
+<div id="tabs">
+  <button id="tabBBtn" class="tabButton active">VÍDEO</button>
+  <button id="tabABtn" class="tabButton">MAPA</button>
+
+</div>
+
+
+<!-- TAB B: VIDEO + BOTONES -->
+<div id="tabB" class="tabContent active">
+  <video id="video" autoplay playsinline></video>
+
+  <div class="controls" id="videoControls">
+    <button id="connectBtn" class="btn">CONECTAR</button>
+    <button id="photoBtn" class="btn">FOTO</button>
+    <button id="recordBtn" class="btn">GRABAR</button>
+    <div class="recIndicator" id="recInd"></div>
+  </div>
+</div>
+<!-- TAB A: MAP -->
+<div id="tabA" class="tabContent">
+  <div id="map"></div>
+</div>
+
+
+<script>
+/* ------------------ TAB SWITCH ------------------ */
+const tabABtn = document.getElementById('tabABtn');
+const tabBBtn = document.getElementById('tabBBtn');
+const tabA = document.getElementById('tabA');
+const tabB = document.getElementById('tabB');
+
+tabABtn.onclick = () => { tabA.classList.add('active'); tabB.classList.remove('active'); tabABtn.classList.add('active'); tabBBtn.classList.remove('active'); invalidateMap(); };
+tabBBtn.onclick = () => { tabB.classList.add('active'); tabA.classList.remove('active'); tabBBtn.classList.add('active'); tabABtn.classList.remove('active'); };
+
+/* ------------------ MAP SETUP ------------------ */
+const map = L.map('map').setView([41.27643480257282, 1.9886956161819893], 20);
+
+// NOTE: estás usando Google tiles no oficiales. Si lo prefieres, reemplaza por MapTiler/OSM.
+L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(map);
+
+// simple red dot icon (SVG base64)
+const droneIcon = L.icon({
+  iconUrl: "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="red" /></svg>`),
+  iconSize: [20,20],
+  iconAnchor: [10,10]
+});
+
+let droneMarker = null;
+let headingLine = null;
+
+function updateDronePosition(lat, lon, heading) {
+  if (!droneMarker) {
+    droneMarker = L.marker([lat, lon], { icon: droneIcon }).addTo(map);
+  } else {
+    droneMarker.setLatLng([lat, lon]);
+  }
+
+  // heading line ~40 m
+  const distanceMeters = 40;
+  const dLat = (distanceMeters / 111320) * Math.cos(heading * Math.PI / 180);
+  const dLon = (distanceMeters / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(heading * Math.PI / 180);
+  const endLat = lat + dLat;
+  const endLon = lon + dLon;
+
+  if (!headingLine) {
+    headingLine = L.polyline([[lat, lon], [endLat, endLon]], { color: 'red', weight: 3 }).addTo(map);
+  } else {
+    headingLine.setLatLngs([[lat, lon], [endLat, endLon]]);
+  }
+
+  map.panTo([lat, lon], { animate: true });
+}
+
+/* Ensure map redraw when shown */
+function invalidateMap() {
+  if (window.map) {
+    setTimeout(() => { map.invalidateSize(); }, 200);
+  }
+}
+
+/* ------------------ VIDEO + CONTROLS ------------------ */
+const videoEl = document.getElementById('video');
+const connectBtn = document.getElementById('connectBtn');
+const photoBtn = document.getElementById('photoBtn');
+const recordBtn = document.getElementById('recordBtn');
+const recInd = document.getElementById('recInd');
+
+/* ------------------ WEBRTC + SIGNALING (UNIFICADO) ------------------ */
+let ws = null;
+let pc = null;
+let dataChannel = null;
+
+/**
+ * createPC - crea RTCPeerConnection y define handlers:
+ * - ontrack -> asigna video.srcObject
+ * - ondatachannel -> espera datachannel 'posicion' con JSON {lat,lon,heading}
+ */
+function createPC() {
+  const config = {
+    iceServers: [
+      { urls: "stun:stun.relay.metered.ca:80" },
+      {
+        urls: "turn:standard.relay.metered.ca:80",
+        username: "337f189c0bf26e1022e19f05",
+        credential: "pSwi01maZzQZTUAf"
+      }
+    ]
+  };
+
+  pc = new RTCPeerConnection(config);
+
+  pc.onicecandidate = (event) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: "ice",
+      role: "receptor",
+      candidate: event.candidate ? {
+        candidate: event.candidate.candidate,
+        sdpMid: event.candidate.sdpMid ?? "0",
+        sdpMLineIndex: event.candidate.sdpMLineIndex ?? 0
+      } : null
+    }));
+  };
+
+  pc.ontrack = (ev) => {
+    if (ev.streams && ev.streams[0]) {
+      videoEl.srcObject = ev.streams[0];
+    } else {
+      const ms = new MediaStream();
+      ms.addTrack(ev.track);
+      videoEl.srcObject = ms;
+    }
+  };
+
+  pc.ondatachannel = (ev) => {
+    // esperamos un datachannel llamado 'posicion' (pero aceptamos cualquiera)
+    dataChannel = ev.channel;
+    console.log('DataChannel entrante:', dataChannel.label);
+    dataChannel.onopen = () => { console.log('DataChannel abierto:', dataChannel.label); };
+    dataChannel.onclose = () => { console.log('DataChannel cerrado'); };
+    dataChannel.onmessage = (m) => {
+      try {
+        const obj = JSON.parse(m.data);
+        if (typeof obj.lat === 'number' && typeof obj.lon === 'number') {
+          // Si heading no viene, lo ponemos a 0
+          const heading = typeof obj.heading === 'number' ? obj.heading : 0;
+          updateDronePosition(obj.lat, obj.lon, heading);
+        }
+      } catch (e) {
+        console.warn('No JSON en dataChannel:', m.data);
+      }
+    };
+  };
+
+  return pc;
+}
+
+/* Handle incoming signaling messages from your ws server */
+async function handleMessage(evt) {
+  const data = JSON.parse(evt.data);
+
+  if (data.type === 'ice' && data.role === 'emisor') {
+    await pc.addIceCandidate(data.candidate ? new RTCIceCandidate(data.candidate) : null);
+    return;
+  }
+
+  if (data.type === 'sdp' && data.role === 'emisor') {
+    await pc.setRemoteDescription(new RTCSessionDescription({ type: data.sdp_type, sdp: data.sdp }));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    ws.send(JSON.stringify({
+      type: 'sdp',
+      role: 'receptor',
+      sdp: pc.localDescription.sdp,
+      sdp_type: pc.localDescription.type
+    }));
+  }
+}
+
+/* Connect via WebSocket signaling and create PC */
+function connect() {
+  const url = "ws://" + window.location.hostname + ":8108";
+  ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+
+  ws.onopen = () => {
+    console.log('WS abierto, creando PC y pidiendo stream');
+    createPC();
+    ws.send(JSON.stringify({ type: 'peticion' }));
+  };
+
+  ws.onclose = () => { console.log('WS cerrado'); };
+  ws.onerror = (e) => { console.error('WS error', e); };
+      document.documentElement.requestFullscreen();
+}
+
+/* ------------------ BOTORES: CONNECT, PHOTO, RECORD ------------------ */
+
+/* Disable buttons when connecting, enable when connected (minimal UX) */
+function setConnectedUI() {
+  connectBtn.disabled = true;
+  connectBtn.style.backgroundColor = "#00C851";
+}
+
+/* Unique filename generator */
+function uniqueName(prefix, ext) {
+  const now = new Date();
+  const ts = now.getFullYear() + "-" +
+    String(now.getMonth()+1).padStart(2,'0') + "-" +
+    String(now.getDate()).padStart(2,'0') + "_" +
+    String(now.getHours()).padStart(2,'0') + "-" +
+    String(now.getMinutes()).padStart(2,'0') + "-" +
+    String(now.getSeconds()).padStart(2,'0') + "-" +
+    String(now.getMilliseconds()).padStart(3,'0');
+  return `${prefix}_${ts}.${ext}`;
+}
+
+/* FOTO */
+photoBtn.onclick = () => {
+  if (!videoEl || !videoEl.srcObject) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = videoEl.videoWidth || 1280;
+  canvas.height = videoEl.videoHeight || 720;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob((blob) => {
+    const fileName = uniqueName('foto','jpg');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, 'image/jpeg', 0.92);
+};
+
+/* GRABACIÓN (toggle) */
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+
+recInd.style.display = 'none';
+
+recordBtn.onclick = () => {
+  if (!isRecording) {
+    if (!videoEl || !videoEl.srcObject) { alert('No hay stream de video para grabar'); return; }
+    recordedChunks = [];
+
+    // Try MP4; fallback to webm
+    let options = { mimeType: 'video/mp4' };
+    if (!MediaRecorder.isTypeSupported('video/mp4')) {
+      options = { mimeType: 'video/webm;codecs=vp8,opus' };
+      console.warn('MP4 no soportado, usando WebM');
+    }
+
+    try {
+      mediaRecorder = new MediaRecorder(videoEl.srcObject, options);
+    } catch (e) {
+      mediaRecorder = new MediaRecorder(videoEl.srcObject);
+    }
+
+    mediaRecorder.ondataavailable = (ev) => { if (ev.data && ev.data.size) recordedChunks.push(ev.data); };
+    mediaRecorder.onstop = () => {
+      const usedMime = mediaRecorder && mediaRecorder.mimeType && mediaRecorder.mimeType.includes('mp4') ? 'video/mp4' : 'video/webm';
+      const blob = new Blob(recordedChunks, { type: usedMime });
+      const fileName = uniqueName('video','mp4'); // always .mp4 (may actually be webm if browser didn't support mp4)
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    recordBtn.textContent = 'GRABANDO';
+    recordBtn.style.backgroundColor = '#00A000';
+    recInd.style.display = 'block';
+    return;
+  }
+
+  // stop
+  if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+  isRecording = false;
+  recordBtn.textContent = 'GRABAR';
+  recordBtn.style.backgroundColor = '#8B4513';
+  recInd.style.display = 'none';
+};
+
+/* ------------------ CONNECT BUTTON HANDLER ------------------ */
+connectBtn.onclick = () => {
+  // avoid creating multiple connections
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  setConnectedUI();
+  connect();
+};
+
+/* ------------------ CLEANUP ON UNLOAD ------------------ */
+window.addEventListener('beforeunload', () => {
+  try { if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); } catch(e){}
+  try { if (pc) pc.close(); } catch(e){}
+  try { if (ws) ws.close(); } catch(e){}
+});
+</script>
+</body>
+</html>
