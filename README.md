@@ -149,5 +149,10 @@ En la carpeta ServidorVideoTelemetría puede encontrarse el código de una webap
 
 Como aportación extra, el cliente web puede tomar fotos y también grabar vídeos que se almacenan localmente.   
 
+### 5.5 Corrección Ojo de Pez    
+Esa carpeta tiene el código necesario para realizar la corrección de imágenes distorsionadas por el efecto Ojo de Pez. Con frecuencia, las cámaras que se montan en un dron para vuelos FPV producen imágenes con el efecto Ojo de Pez, que introducen una distorsión que puede ser adecuada para el vuelo FPV, pero que puede dificultar la toma de imágenes para realizar operaciones como reconocimiento de objetos o stitching.  
+
+La distorsión puede corregirse aplicando el código que está en el fichero *calibrate.py*. Este código necesita una colección de imágenes tomadas con la cámara, que se encuentran en la carpeta input21. El código calcula unos parámetros necesarios para la corrección y genera el fichero *calibration_data_px.yaml* que se encuentra en la carpeta output21. Ese fichero puede usarse ya para la corrección de las imágenes tomadas por la cámara. En el fichero *undistortVideo.py* hay un código que usa el corrector para corregir las imágenes que hay en input21. El resultado está en output21. Además, en el fichero *demo.py* hay un código que corrige el stream de video que se recibe de la cámara. Naturalmente, cada cámara necesita su corrector. El corrector que hay en esta carpeta es el que corresponde a la cámara FPV Camera Walksnail Avatar HD.   
+
 
 
