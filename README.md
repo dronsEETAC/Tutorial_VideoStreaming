@@ -154,5 +154,8 @@ Esa carpeta tiene el código necesario para realizar la corrección de imágenes
 
 La distorsión puede corregirse aplicando el código que está en el fichero *calibrate.py*. Este código necesita una colección de imágenes tomadas con la cámara, que se encuentran en la carpeta input21. El código calcula unos parámetros necesarios para la corrección y genera el fichero *calibration_data_px.yaml* que se encuentra en la carpeta output21. Ese fichero puede usarse ya para la corrección de las imágenes tomadas por la cámara. En el fichero *undistortVideo.py* hay un código que usa el corrector para corregir las imágenes que hay en input21. El resultado está en output21. Además, en el fichero *demo.py* hay un código que corrige el stream de video que se recibe de la cámara. Naturalmente, cada cámara necesita su corrector. El corrector que hay en esta carpeta es el que corresponde a la cámara FPV Camera Walksnail Avatar HD.   
 
+### 5.6 VideoWebRTC_desdeMovil    
+Esta carpeta contiene una webapp que permite enviar por WebRTC al receptor el stream de video de la cámara del dispositivo móvil que se conecta. No tiene mayor novedad respecto al mecanismo WebRTC. Lo más importante es que para que el dispositivo movil capture el stream de video de la cámara es necesario que la webapp trabaje con https y por tanto use certificados.    
+
 
 
