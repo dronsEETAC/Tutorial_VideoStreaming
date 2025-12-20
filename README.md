@@ -142,4 +142,17 @@ Este caso si puede ser de aplicación en el contexto del ecosistema porque se tr
 
 Hay que poner en marcha el proxyWebRTC, entonces poner en marcha el formulario C#, que esta en la carpeta Receptor, y después poner en marcha el senderGlobalWebRTC. El formulario pondrá en marcha el script receiverParaCs, que es prácticamente igual al receiverGlobalWebRTC, pero con los cambios necesarios para enviar los frames al formulario, en lugar de mostrarlos en una ventana de OpenCV.   
 
+### 5.4 ServidorVideoTelemetría   
+La comunicación via WebRTC puede usarse también para el envío de datos, como por ejemplo, datos de telemetría. Un paquete de datos de telemetría es mucho más pequeño que un frame de video. Por tanto, podría enviarse pertectamente usando MQTT o Websockets. Sin embargo, también ocurre en ese caso como con los frames de video. No es especialmente grave que se pierda algún paquete de datos de telemetría de vez en cuando, cosa que puede pasar al usar WebRTC, debido al uso de UDP. Por tanto, si usamos WebRTC para enviar datos de telemetría, podríamos subir la frecuencia de envío de esos datos si fuese necesario.   
+
+En la carpeta ServidorVideoTelemetría puede encontrarse el código de una webapp que muestra al usuario el stream de video (como en casos anteriores) y también muestra un mapa satelital en el que se representa la posición del dron en cada momento. Por tanto, el cliente web recibe por WebRTC tanto el stream de vídeo como los datos de telemetría (solo lat, lon y heading). El servidor web no tiene ninguna novedad respecto al indicado en el apartado 4.3, puesto que lo único que tiene que hacer es retrasmitir de un lado al otro los mensajes que llegan por el websocket. En emisor si que tiene novedades, porque ahora debe enviar por WebRTC también los datos de telemetría. Para ello usa la librería DronLink que ofrece funciones para conectarse al dron y para obtener los datos de telemetría.   
+
+Como aportación extra, el cliente web puede tomar fotos y también grabar vídeos que se almacenan localmente.   
+
+### 5.5 Corrección Ojo de Pez    
+Esa carpeta tiene el código necesario para realizar la corrección de imágenes distorsionadas por el efecto Ojo de Pez. Con frecuencia, las cámaras que se montan en un dron para vuelos FPV producen imágenes con el efecto Ojo de Pez, que introducen una distorsión que puede ser adecuada para el vuelo FPV, pero que puede dificultar la toma de imágenes para realizar operaciones como reconocimiento de objetos o stitching.  
+
+La distorsión puede corregirse aplicando el código que está en el fichero *calibrate.py*. Este código necesita una colección de imágenes tomadas con la cámara, que se encuentran en la carpeta input21. El código calcula unos parámetros necesarios para la corrección y genera el fichero *calibration_data_px.yaml* que se encuentra en la carpeta output21. Ese fichero puede usarse ya para la corrección de las imágenes tomadas por la cámara. En el fichero *undistortVideo.py* hay un código que usa el corrector para corregir las imágenes que hay en input21. El resultado está en output21. Además, en el fichero *demo.py* hay un código que corrige el stream de video que se recibe de la cámara. Naturalmente, cada cámara necesita su corrector. El corrector que hay en esta carpeta es el que corresponde a la cámara FPV Camera Walksnail Avatar HD.   
+
+
 
