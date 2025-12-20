@@ -93,7 +93,7 @@ async def run(server_url: str, stream_id: str):
 
 
                 cand = data.get("candidate")
-                if cand:
+                if not cand:
                     try:
                         await pc.addIceCandidate(None)
                     except Exception:

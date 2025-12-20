@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>WebRTC Camera Sender</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #0d47a1;
+    }
+
+    video {
+      width: 640px;
+      max-width: 90vw;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      margin-bottom: 25px;
+      background: #000;
+    }
+
+    button {
+      padding: 14px 32px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(135deg, #2196f3, #1565c0);
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+      background: linear-gradient(135deg, #42a5f5, #1e88e5);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body>
+
+<h2>WebRTC Camera Sender</h2>
+
+<video id="local" autoplay playsinline></video>
+
+<button onclick="start()">Start</button>
+
+<script>
+const peerId = "browser";
+const targetId = "python";
+//const ws = new WebSocket("ws://localhost:5000/ws");
+const ws = new WebSocket("wss://dronseetac.upc.edu:8107/ws");
+
+const config = {
+  iceServers: [
+    { urls: "stun:stun.relay.metered.ca:80" },
+    {
+      urls: "turn:dronseetac.upc.edu:3478",
+      username: "dronseetac",
+      credential: "Mimara00.",
+    }
+  ]
+};
+
+const pc = new RTCPeerConnection(config);
+
+ws.onopen = () => ws.send(peerId);
+
+pc.onicecandidate = e => {
+  if (e.candidate) {
+    ws.send(JSON.stringify({
+      target: targetId,
+      type: "candidate",
+      candidate: e.candidate
+    }));
+  }
+};
+
+ws.onmessage = async e => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === "answer") {
+    await pc.setRemoteDescription(msg.answer);
+  }
+};
+
+async function start() {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  document.getElementById("local").srcObject = stream;
+
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  ws.send(JSON.stringify({
+    target: targetId,
+    type: "offer",
+    offer
+  }));
+}
+</script>
+
+</body>
+</html>

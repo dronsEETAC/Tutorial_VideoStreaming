@@ -57,7 +57,7 @@ async def run(server_url: str, stream_id: str):
 
                     RTCIceServer(urls="turn:dronseetac.upc.edu:3478",
                                  username="dronseetac",
-                                 credential="mimara")
+                                 credential="Mimara00.")
                 ])
                 '''RTCIceServer(urls="turn:standard.relay.metered.ca:80",
                                                  username = "337f189c0bf26e1022e19f05",
@@ -135,7 +135,7 @@ async def run(server_url: str, stream_id: str):
 if __name__ == "__main__":
     cameraTrack = CameraVideoTrack()
     import sys
-    #server = "ws://dronseetac.upc.edu:8108"
-    server = "ws://127.0.0.1:8108"
+    server = "ws://dronseetac.upc.edu:8108"
+    #server = "ws://127.0.0.1:8108"
     sid = "mi_stream"
     asyncio.run(run(server, sid))

@@ -10,7 +10,7 @@ def main():
     # "http://..." -> stream MJPEG/HTTP
     OUTPUT = 'output21'
     yamlname = OUTPUT + '/calibration_data_px.yaml'
-    stream_source = 1   # cámbialo si necesitas usar un stream remoto
+    stream_source = 1  # cámbialo si necesitas usar un stream remoto
 
     with open(yamlname) as f:
         data = yaml.safe_load(f)
