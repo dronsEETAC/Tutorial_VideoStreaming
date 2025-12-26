@@ -66,6 +66,13 @@ async def handler(ws):
                 print("Recibo y traslado a todos los receptores un candidato para el emisor")
                 for receptor in receptores:
                     await receptor.send(raw)
+            elif data.get("type") == "client-disconnect":
+                id = receptores.index(ws)
+                print ("Se descinecta el cliente: ", id);
+                data["id"] = id
+                await wsEmisor.send(json.dumps(data))
+
+
 
 async def start_websocket_server():
     # Servidor WebSocket escuchando en puerto 8108

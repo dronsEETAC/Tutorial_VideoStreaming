@@ -12,24 +12,44 @@ from websockets import connect
 
 from aiortc.sdp import candidate_from_sdp
 
-ofertas = []
-class CameraVideoTrack(VideoStreamTrack):
+
+
+
+class CameraSource:
     def __init__(self, device=0):
-        super().__init__()
         self.cap = cv2.VideoCapture(device)
-        print ("Camara preparada")
+        self.frame = None
+        self.lock = asyncio.Lock()
+
+    async def read(self):
+        async with self.lock:
+            ret, frame = self.cap.read()
+            if not ret:
+                return None
+            return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+
+
+class CameraVideoTrack(VideoStreamTrack):
+    def __init__(self, source: CameraSource):
+        super().__init__()
+        self.source = source
 
     async def recv(self):
         pts, time_base = await self.next_timestamp()
-        ret, frame = self.cap.read()
-        if not ret:
-            await asyncio.sleep(0.1)
+        frame = await self.source.read()
+
+        if frame is None:
+            await asyncio.sleep(0.02)
             return await self.recv()
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         avf = VideoFrame.from_ndarray(frame, format="rgb24")
         avf.pts = pts
         avf.time_base = time_base
         return avf
+
+ofertas = []
+cameraSource = CameraSource()
 
 
 def dict_to_ice_candidate(cand: dict):
@@ -39,6 +59,52 @@ def dict_to_ice_candidate(cand: dict):
     ice.sdpMid = cand.get("sdpMid") or "0"
     ice.sdpMLineIndex = cand.get("sdpMLineIndex") or 0
     return ice
+
+async def cleanup_client2(id):
+    global ofertas
+    pc = None
+    for item in ofertas:
+        if item["id"] == id:
+            pc = item["conexion"]
+            break
+    if not pc:
+        print("No he encontrado conexión para el receptor:", id)
+        return
+    for sender in pc.getSenders():
+        if sender.track:
+            print ("stop")
+            #sender.track.stop()
+    await pc.close()
+    ofertas = [item for item in ofertas if item["id"] != id]
+
+async def cleanup_client(id):
+    global ofertas
+
+    pc = None
+    for item in ofertas:
+        if item["id"] == id:
+            pc = item["conexion"]
+            break
+
+    if not pc:
+        print("No he encontrado conexión para el receptor:", id)
+        return
+
+        # Detener tracks (NO async)
+    for sender in pc.getSenders():
+        if sender.track:
+            sender.track.stop()
+
+    # Cerrar PeerConnection
+    if pc.connectionState != "closed":
+        await pc.close()
+
+    # Eliminar de la lista
+    ofertas = [item for item in ofertas if item["id"] != id]
+
+    print(f"Conexión cerrada para receptor {id}")
+
+
 
 async def run(server_url: str, stream_id: str):
     global cameraTrack, ofertas
@@ -84,7 +150,12 @@ async def run(server_url: str, stream_id: str):
                             "candidate": None
                         }))
                         print("Envio fin de candidatos para el receptor: ", id)
-                pc.addTrack(cameraTrack)
+                # creo un nuevo track para este cliente
+                # En versiones anteriores estaba creando un solo track compartido por todos los clientes
+                # Al cerrar un cliente mataba el track y se congelaban todos los clientes restantes
+                track = CameraVideoTrack(cameraSource)
+                pc.addTrack(track)
+
                 offer = await pc.createOffer()
                 await pc.setLocalDescription(offer)
                 ofertas.append ({
@@ -131,9 +202,15 @@ async def run(server_url: str, stream_id: str):
                     except Exception as e:
                         print("Error añadiendo candidato:", e)
                     continue
+            if data.get("type") == "client-disconnect":
+                id = data.get("id")
+                print("Se desconecta el cliente: ", id)
+                await cleanup_client(id)
+                print ("Ya he eliminado el envío al cliente: ", id)
+
+
 
 if __name__ == "__main__":
-    cameraTrack = CameraVideoTrack()
     import sys
     server = "ws://dronseetac.upc.edu:8108"
     #server = "ws://127.0.0.1:8108"

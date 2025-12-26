@@ -155,6 +155,15 @@ btn.onclick = () => {
     btn.style.backgroundColor = "#00C851";
     connect();
 };
+
+// Se ejecuta cuando se cierra el navegador
+window.addEventListener("beforeunload", () => {
+   ws.send(JSON.stringify({
+            type: "client-disconnect",
+        }));
+});
+
+
 </script>
 
 </body>
