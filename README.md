@@ -128,6 +128,11 @@ En la carpeta WebRTC/WebApp pueden encontrarse los códigos de una WebApp que fa
 
 Esta opción es la ideal para que el stream de video captado por el dron mientras vuela en el DroneLab pueda ser visto en los dispositivos móviles de los visitantes. En esa situación el portátil en el que se ejecuta el programa emisor del video stream estará conectado a la Wifi del DroneLab. En el caso de que los dispositivos móviles también estén conectados a esa Wifi la transmisión del video se realizará sin intervención de servidores STUN o TURN, y el video se recibirá con gran fluidez. En el caso de los dispositivos móviles que estén conectados a otras redes (por ejemplo, al servicio de datos de su compañía telefónica) será necesaria la intermediación de servidores STUN y muy probablemente TURN, con lo que la fluidez puede verse algo afectada, e incluso es posible que la conexión no pueda establecerse.    
 
+La implementación que hay aquí permite a varios clientes web conectarse y recibir el stream de video. Se ha incluido la mecánica necesaria para que cuando un cliente web se desconecta se cierre el canal WebRTC por el que se emitía el stream de video para ese cliente. Eso hace que el sistema sea más escalable y permite muchos clientes web simultáneos. Si no se hace esto, el sistema se satura al conectar 5 o más clientes. Es lo que puede pasar en el resto de implemmentaciones de WebRTC que hay en este repositorio en las que no se ha introducido la mecánica de desconexión.   
+
+Es importante observar que para que la desconexión de un cliente web funcione bien, cada cliente web debe tener su propio track, que se cerrará en el momento de la desconexión sin afectar a los otros clientes web, cada uno de los cuales tiene su propio track. En el resto de implementacione de este repositorio, todos los clientes de WebRTC comparten el mismo track, con lo que si se desconectase uno de ellos y se cerrara el track, se congelaría el stream de video en todos los demás.   
+
+
 ## 5. Extras     
 En la carpeta de extras hay algunos códigos que no corresponden a ninguno de los escenarios anteriores y no son, por tanto, de aplicación en el ecosistema, pero que han resultado de mucha utilidad como pasos intermedios para la implementación que se ha descrito en el punto 4.3 (que ha sido la más complicada de todas).    
 
