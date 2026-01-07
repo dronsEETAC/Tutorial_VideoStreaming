@@ -159,6 +159,8 @@ Esa carpeta tiene el código necesario para realizar la corrección de imágenes
 
 La distorsión puede corregirse aplicando el código que está en el fichero *calibrate.py*. Este código necesita una colección de imágenes tomadas con la cámara, que se encuentran en la carpeta input21. El código calcula unos parámetros necesarios para la corrección y genera el fichero *calibration_data_px.yaml* que se encuentra en la carpeta output21. Ese fichero puede usarse ya para la corrección de las imágenes tomadas por la cámara. En el fichero *undistortVideo.py* hay un código que usa el corrector para corregir las imágenes que hay en input21. El resultado está en output21. Además, en el fichero *demostrador.py* hay un código que captura el stream de video de la camara, hace la corrección y permite hacer un zoom de la imagen corregida. También puede detectar contornos del color que se seleccione. Naturalmente, cada cámara necesita su corrector. El corrector que hay en esta carpeta es el que corresponde a la cámara FPV Camera Walksnail Avatar HD.   
 
+La imagen siguiente muestra el programa *demostrador.py* en acción. La imagen de la derecha es la original con efecto ojo de pez. La de la izquierda es la imagen corregida, con un poco de zoom y con reconocimiento de contornos de color verde.     
+ 
 <img width="1657" height="608" alt="image" src="https://github.com/user-attachments/assets/9a6692c3-d727-44bd-b1eb-a43e4feb6d34" />
 
 
