@@ -6,39 +6,23 @@ import yaml
 import tkinter as tk
 from PIL import Image, ImageTk
 
+def show_video():
+    global latest_frame, running
 
-def start_video ():
-    global cap,  cam_matrix, dist_coefs, new_cam_mtx
-    global x, y, w, h
-
-    yamlname = 'calibration_data_px.yaml'
-    stream_source = 0  # cámbialo si necesitas usar un stream remoto
-
-    with open(yamlname) as f:
-        data = yaml.safe_load(f)
-
-    cam_matrix = np.array(data['camera_matrix'])
-    dist_coefs = np.array(data['distortion_coefficients'])
-
-    cap = cv2.VideoCapture(stream_source)
-
-    if not cap.isOpened():
-        print("No se pudo abrir el stream de video.")
-        return
-    h,w =480,640
-    new_cam_mtx, roi = cv2.getOptimalNewCameraMatrix(cam_matrix, dist_coefs, (w, h), 1, (w, h))
-    x, y, w, h = roi
-
-    threading.Thread (target = show_video).start()
-
-def show_video ():
-    global video_original_label,  video_corregido_label
-
-    while True:
+    while running:
         ret, img = cap.read()
         if not ret:
-            print("No se pudo leer un frame del stream.")
             break
+
+        latest_frame = img
+
+
+
+def update_tkinter_video():
+    global latest_frame, root
+
+    if latest_frame is not None:
+        img = latest_frame
         dst = img
         if correct:
             u_img = cv2.undistort(dst, cam_matrix, dist_coefs, None, new_cam_mtx)
@@ -67,11 +51,37 @@ def show_video ():
         imgtk2 = ImageTk.PhotoImage(image=img3)
         video_corregido_label.imgtk = imgtk2
         video_corregido_label.configure(image=imgtk2)
+        time.sleep(0.1)
 
-        time.sleep (0.1)
+    root.after(15, update_tkinter_video)  # ~60 FPS
 
-    cap.release()
-    cv2.destroyAllWindows()
+
+def start_video ():
+    global cap,  cam_matrix, dist_coefs, new_cam_mtx
+    global x, y, w, h
+    global running
+
+    yamlname = 'calibration_data_px.yaml'
+    stream_source = 0  # cámbialo si necesitas usar un stream remoto
+
+    with open(yamlname) as f:
+        data = yaml.safe_load(f)
+
+    cam_matrix = np.array(data['camera_matrix'])
+    dist_coefs = np.array(data['distortion_coefficients'])
+
+    cap = cv2.VideoCapture(stream_source)
+
+    if not cap.isOpened():
+        print("No se pudo abrir el stream de video.")
+        return
+    h,w =480,640
+    new_cam_mtx, roi = cv2.getOptimalNewCameraMatrix(cam_matrix, dist_coefs, (w, h), 1, (w, h))
+    x, y, w, h = roi
+
+    running = True
+    threading.Thread(target=show_video, daemon=True).start()
+    update_tkinter_video()
 
 def toggle_correct ():
     global correct
@@ -132,6 +142,12 @@ def main():
     global correct
     global zoom_factor
     global video_original_label,  video_corregido_label
+
+    global latest_frame, running
+    global root
+
+    latest_frame = None
+    running = False
 
     correct = False
     selected_color = None

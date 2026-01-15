@@ -46,4 +46,4 @@ async def main (websocket_url: str):
 
 
 if __name__ == "__main__":
-    asyncio.run(main("ws://127.0.0.1:9999"))
+    asyncio.run(main("ws://192.168.1.70:9999"))

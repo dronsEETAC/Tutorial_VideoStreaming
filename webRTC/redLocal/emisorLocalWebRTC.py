@@ -71,7 +71,7 @@ async def main():
     global video_sender
     HOST = '0.0.0.0'
     PORT = 9999
-    video_sender = CustomVideoStreamTrack(1)
+    video_sender = CustomVideoStreamTrack(0)
     print(f"🖥️ Esperando conexión en ws://{HOST}:{PORT}")
     async with websockets.serve(handle_client, HOST, PORT):
         await asyncio.Future()  # Mantener servidor activo
