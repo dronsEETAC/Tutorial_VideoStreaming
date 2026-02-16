@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+
+<title>WebRTC Viewer</title>
+
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    overflow: hidden;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Video siempre en orientación paisaje */
+video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: 0;
+    /* Forzar orientación horizontal */
+    transform: rotate(0deg);
+}
+/* Modo móvil - siempre en paisaje */
+@media (max-width: 900px) {
+    video {
+        transform: rotate(0deg) !important;
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+    }
+
+     /* Ajustar los joysticks para orientación paisaje */
+     #left, #right {
+            width: 30vh;  /* Usamos altura como referencia para ancho */
+            height: 30vh; /* Altura cuadrada */
+            background: transparent;
+            position: fixed;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            top: 50%;
+            transform: translateY(-50%);
+     }
+
+     #left {
+            left: 3vw;
+     }
+
+     #right {
+            right: 3vw;
+     }
+
+     .nipple {
+            pointer-events: auto;
+            width: 100% !important;
+            height: 100% !important;
+     }
+}
+
+/* Para tablets y pantallas más grandes en modo paisaje */
+@media (min-width: 901px) and (orientation: landscape) {
+    #left, #right {
+        width: 25vh;
+        height: 25vh;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    #left {
+        left: 5vw;
+    }
+
+    #right {
+        right: 5vw;
+    }
+}
+
+#startButton {
+    position: fixed;
+    z-index: 9999;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: none;
+    border-radius: 30px;
+    background-color: #007BFF;
+    color: white;
+    font-weight: bold;
+    font-size: 32px;
+}
+
+ #countdown {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      font-weight: bold;
+      color: yellow;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 10px;
+      border-radius: 6px;
+      z-index: 9999;
+    }
+
+</style>
+</head>
+
+
+<body>
+
+<div id="countdown">0</div>
+
+<button id="startButton">CONECTAR</button>
+<video id="video" autoplay playsinline></video>
+
+<div id="left"></div>
+<div id="right"></div>
+
+<script>
+let ws = null;
+let pc = null;
+
+let leftJoystick = null
+let rightJoystick = null
+
+let timeLeft = 20;
+let timer = null;
+
+
+function startCountdown() {
+      // Evita múltiples contadores a la vez
+      if (timer !== null) return;
+
+      timeLeft = 20;
+      document.getElementById("countdown").textContent = timeLeft;
+
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("countdown").textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          timer = null;
+        }
+      }, 1000);
+}
+
+// Función para vibrar dispositivo
+function vibrateDevice(duration) {
+    if ("vibrate" in navigator) {
+        // API de vibración para móviles
+        navigator.vibrate(duration);
+    } else {
+        console.log("API de vibración no soportada en este dispositivo");
+    }
+}
+
+function showJoysticks() {
+    if (leftJoystick === null) {
+        leftJoystick = createJoystick("left", "left");
+        rightJoystick = createJoystick("right", "right");
+    }
+    document.getElementById("left").style.display = "flex";
+    document.getElementById("right").style.display = "flex";
+
+    vibrateDevice (2000);
+
+    console.log("Joysticks ACTIVADOS");
+}
+
+function hideJoysticks() {
+    // oculto los Joysticks
+    document.getElementById("left").style.display = "none";
+    document.getElementById("right").style.display = "none";
+
+    console.log("Joysticks DESACTIVADOS");
+}
+const btn = document.getElementById("startButton");
+
+const video = document.getElementById("video");
+
+function createPC() {
+    const config = {
+        iceServers: [
+            { urls: "stun:stun.relay.metered.ca:80" },
+            {
+//                urls: "turn:standard.relay.metered.ca:80",
+//                username: "337f189c0bf26e1022e19f05",
+//                credential: "pSwi01maZzQZTUAf",
+                  urls: "turn:dronseetac.upc.edu:3478",
+                username: "dronseetac",
+                credential: "Mimara00.",
+
+           }
+        ]
+    };
+
+    pc = new RTCPeerConnection(config);
+
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            console.log ("Obtengo y envio al servidor un candidato");
+            ws.send(JSON.stringify({
+                type: "ice",
+                role: "receptor",
+                candidate: {
+                    candidate: event.candidate.candidate,
+                    sdpMid: event.candidate.sdpMid ?? "0",
+                    sdpMLineIndex: event.candidate.sdpMLineIndex ?? 0
+                }
+            }));
+        } else {
+            console.log ("Recibo indicación de que se acabaron los candidatos");
+            ws.send(JSON.stringify({
+                type: "ice",
+                role: "receptor",
+                candidate: null
+            }));
+        }
+    };
+
+    // Vídeo entrante
+    pc.ontrack = (ev) => {
+        if (ev.streams && ev.streams[0]) {
+            video.srcObject = ev.streams[0];
+        } else {
+            const ms = new MediaStream();
+            ms.addTrack(ev.track);
+            video.srcObject = ms;
+        }
+    };
+
+    return pc;
+}
+
+async function handleMessage(evt) {
+    const data = JSON.parse(evt.data);
+
+    if (data.type === "ice" && data.role === "emisor") {
+
+        if (data.candidate) {
+            print ("Recibo candidato del emisor");
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } else {
+            print ("Recibo indicación de que se acabaron los candidatos para el emisor");
+            await pc.addIceCandidate(null);
+        }
+        return;
+    }
+
+    if (data.type === "sdp" && data.role === "emisor") {
+        console.log("Recibo oferta del emisor");
+
+        await pc.setRemoteDescription(
+            new RTCSessionDescription({ type: data.sdp_type, sdp: data.sdp })
+        );
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        console.log ("Envio aceptación de la ofereta");
+
+        ws.send(JSON.stringify({
+            type: "sdp",
+            role: "receptor",
+            sdp: pc.localDescription.sdp,
+            sdp_type: pc.localDescription.type
+        }));
+    }
+
+    if (data.type === "startJoystick") {
+        showJoysticks();
+        startCountdown();
+
+    }
+    if (data.type === "stopJoystick") {
+        hideJoysticks();
+        ws.send(JSON.stringify({
+            type: "move",
+            id: "left",
+            x: 0,
+            y: 0
+         }));
+        ws.send(JSON.stringify({
+            type: "move",
+            id: "right",
+            x: 0,
+            y: 0
+         }));
+
+    }
+}
+async function connect() {
+    if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+    }
+
+   const url = "ws://" + window.location.hostname + ":8108";
+
+    ws = new WebSocket(url);
+    ws.onmessage = handleMessage;
+
+    ws.onopen = () => {
+        createPC();
+        console.log ("Conectado al servidor. Envío petición");
+        ws.send(JSON.stringify({ type: "peticion" }));
+    };
+}
+
+btn.onclick = () => {
+    btn.disabled = true;
+    btn.style.backgroundColor = "#00C851";
+    btn.textContent = "CONECTADO";
+    connect();
+};
+
+
+// Se ejecuta cuando se cierra el navegador
+window.addEventListener("beforeunload", () => {
+   ws.send(JSON.stringify({
+            type: "client-disconnect",
+        }));
+});
+function createJoystick(zoneId, joyId) {
+      const manager = nipplejs.create({
+        zone: document.getElementById(zoneId),
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: 'cyan',
+        size: Math.min(window.innerHeight, window.innerWidth) * 0.5
+      });
+
+      manager.on('move', function (_, data) {
+        if (timeLeft  > 0) {
+            const angle = data.angle ? data.angle.radian : 0;
+            const force = Math.min(data.force || 0, 1);
+            const px = (force * Math.cos(angle)).toFixed(2);
+            const py = (force * Math.sin(angle)).toFixed(2);
+            //socket.emit('sendRC', JSON.stringify({ id: joyId, x:px, y:py }))
+            console.log (joyId, px, py)
+            ws.send(JSON.stringify({
+                type: "move",
+                id: joyId,
+                x: px,
+                y: py
+            }));
+        } else {
+            ws.send(JSON.stringify({
+                type: "move",
+                id: "left",
+                x: 0,
+                y: 0
+            }));
+            ws.send(JSON.stringify({
+                type: "move",
+                id: "right",
+                x: 0,
+                y: 0
+            }));
+        }
+
+      });
+
+      manager.on('end', function () {
+         //socket.emit('sendRC', JSON.stringify({ id: joyId, x:0, y:0 }))
+         ws.send(JSON.stringify({
+            type: "move",
+            id: joyId,
+            x: 0,
+            y: 0
+        }));
+
+      });
+}
+</script>
+
+</body>
+</html>
+

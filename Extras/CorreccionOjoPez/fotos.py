@@ -4,7 +4,7 @@ import os
 def main():
     # Abrir la cámara (0 = cámara por defecto)
     print ("Preparando camara ...")
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
         print("No se puede abrir la cámara")

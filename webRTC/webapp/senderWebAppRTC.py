@@ -4,6 +4,8 @@
 
 import asyncio
 import json
+import time
+
 import cv2
 
 from aiortc import RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, VideoStreamTrack, RTCConfiguration, RTCIceServer
@@ -17,17 +19,45 @@ from aiortc.sdp import candidate_from_sdp
 
 class CameraSource:
     def __init__(self, device=0):
-        self.cap = cv2.VideoCapture(device)
-        self.frame = None
+        if device == 2: # dron Tello
+            from  djitellopy import Tello
+            self.tello = Tello()
+            self.tello.connect()
+            self.tello.streamon()
+
+
+            time.sleep(2)
+
+
+            self.cap = cv2.VideoCapture(
+                "udp://127.0.0.1:11111?fifo_size=500000&overrun_nonfatal=1",
+                cv2.CAP_FFMPEG
+            )
+
+            if not self.cap.isOpened():
+                raise RuntimeError("No se pudo abrir el vídeo del Tello")
+
+        else:
+            self.cap = cv2.VideoCapture(device)
+
         self.lock = asyncio.Lock()
+
+
 
     async def read(self):
         async with self.lock:
-            ret, frame = self.cap.read()
-            if not ret:
-                return None
-            return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = None
 
+            # 🔥 descartar frames antiguos
+            for _ in range(3):
+                ret, f = self.cap.read()
+                if ret:
+                    frame = f
+
+            if frame is None:
+                return None
+
+            return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
 
 class CameraVideoTrack(VideoStreamTrack):
@@ -48,8 +78,6 @@ class CameraVideoTrack(VideoStreamTrack):
         avf.time_base = time_base
         return avf
 
-ofertas = []
-cameraSource = CameraSource()
 
 
 def dict_to_ice_candidate(cand: dict):
@@ -107,7 +135,7 @@ async def cleanup_client(id):
 
 
 async def run(server_url: str, stream_id: str):
-    global cameraTrack, ofertas
+    global cameraTrack, ofertas, cameraSource
 
     async with connect(server_url) as ws:
         print ("Voy a registrarme como emisor del video")
@@ -213,6 +241,17 @@ async def run(server_url: str, stream_id: str):
 if __name__ == "__main__":
     import sys
     server = "ws://dronseetac.upc.edu:8108"
-    #server = "ws://127.0.0.1:8108"
     sid = "mi_stream"
+
+    print ("Elije la fuente del video stream: ")
+    print("0 ---  Cámara del portátil (por defecto)")
+    print("1 ---  Cámara del dron Hexsoon")
+    print("2 ---  Cámara del dron Tello")
+    try:
+        opcion = int (input ("Escribe el número de la opción elegida: "))
+    except ValueError:
+        opcion = 0
+
+    ofertas = []
+    cameraSource = CameraSource(opcion)
     asyncio.run(run(server, sid))

@@ -62,7 +62,7 @@ def start_video ():
     global running
 
     yamlname = 'calibration_data_px.yaml'
-    stream_source = 0  # cámbialo si necesitas usar un stream remoto
+    stream_source = 1  # cámbialo si necesitas usar un stream remoto
 
     with open(yamlname) as f:
         data = yaml.safe_load(f)
