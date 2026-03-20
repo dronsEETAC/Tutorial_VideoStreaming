@@ -18,6 +18,7 @@ async def handler(ws):
     async for raw in ws:
             print ("Recibo algo")
             data = json.loads(raw)
+            print (data)
 
             if data.get("type") == "registro" and data.get("role") == "emisor":
                 print ("Es el emisor que se registra")

@@ -48,13 +48,14 @@ async def run(server_url: str, stream_id: str):
 
     async with connect(server_url) as ws:
         # registro
-        await ws.send(json.dumps({"type": "register", "role": "receiver", "stream_id": stream_id}))
+        await ws.send(json.dumps({"type": "peticion", "role": "receptor", "stream_id": stream_id}))
         print("Registrado como receiver, esperando offer...")
 
 
         async for raw in ws:
             data = json.loads(raw)
-            if data.get("role") != "sender":
+
+            if data.get("role") != "emisor":
                 continue
             if data.get("type") == "sdp":
                 print ("Ha llegado la oferta del emisor")
@@ -63,7 +64,7 @@ async def run(server_url: str, stream_id: str):
                 await pc.setRemoteDescription(desc)
                 answer = await pc.createAnswer()
                 await pc.setLocalDescription(answer)
-                await ws.send(json.dumps({"type": "sdp", "role": "receiver", "stream_id": stream_id, "sdp": pc.localDescription.sdp, "sdp_type": pc.localDescription.type}))
+                await ws.send(json.dumps({"type": "sdp", "role": "receptor", "stream_id": stream_id, "sdp": pc.localDescription.sdp, "sdp_type": pc.localDescription.type}))
                 print("Answer enviada")
 
 
