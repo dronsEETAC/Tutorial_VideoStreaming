@@ -167,5 +167,9 @@ La imagen siguiente muestra el programa *demostrador.py* en acción. La imagen d
 ### 5.6 VideoWebRTC_desdeMovil    
 Esta carpeta contiene una webapp que permite enviar por WebRTC al receptor el stream de video de la cámara del dispositivo móvil que se conecta. No tiene mayor novedad respecto al mecanismo WebRTC. Lo más importante es que para que el dispositivo movil capture el stream de video de la cámara es necesario que la webapp trabaje con https y por tanto use certificados.    
 
+### 5.7 SevidorConJoystick   
+En esta carpeta está el código de un servidor web que permite a varios clientes conectarse para controlar un dron desde el movil, usando un joystick virtual para los 4 movimientos básicos (throttle, yaw, pitch y roll). La estación de tierra, que transmite por WebRTC el stream de video que recibe del dron, puede conectarse al simulador SITL, al dron ardupilot real o a un dron Tello. El servidor va eligiendo aleatoriamente el cliente que puede controlar el dron, que será el único que tendrá activo el Joystick durante 20 segundos.   
+
+
 
 
