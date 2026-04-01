@@ -58,11 +58,11 @@ En la carpeta Websockets/redLocal pueden encontrarse los códigos de un emisor y
 
 ### 2.3 WebRTC   
 
-El protocolo Websockets no es tampoco el mecanismo ideal ya sigue incurriendo en los retardos propios de TCP debidos al control de flujo y mecanismos de recuperación de paquetes perdidos. Una aplicación de video streaming no requiere de estos mecanismos puesto que la pérdida eventual de frames no necesariamente representa un excesivo perjuicio de la experiencia de usuario. El protocolo WebRTC (Web Real-Time Communication) se basan en UDP/IP y, por tanto, no espera confirmaciones de paquetes, lo cual da como resultado una transmisión de mayor fluidez.    
+El protocolo Websockets no es tampoco el mecanismo ideal ya que sigue incurriendo en los retardos propios de TCP debidos al control de flujo y mecanismos de recuperación de paquetes perdidos. Una aplicación de video streaming no requiere de estos mecanismos puesto que la pérdida eventual de frames no necesariamente representa un excesivo perjuicio de la experiencia de usuario. El protocolo WebRTC (Web Real-Time Communication) se basan en UDP/IP y, por tanto, no espera confirmaciones de paquetes, lo cual da como resultado una transmisión de mayor fluidez.    
 
 De nuevo, uno de los agentes implicados (emisor o receptor) debe actuar como servidor y el otro como cliente. El cliente se conecta al servidor usando la IP de éste en la LAN. Para establecer la conexión el cliente y servidor intercambian algunos mensajes por websocket. Básicamente el emisor del video stream debe enviar por el websocket una oferta y el receptor debe responder con una aceptación. En ese intercambio, emisor y receptor se dan a conocer mutuamente información necesaria para la comunicación del stream de video (por ejemplo, sus IPs dentro de la LAN). Una vez establecida la conexión el emisor envía el stream de video que llegará al receptor con menor retraso y mejor fluidez, como corresponde al uso de UDP en vez de TCP, aunque con posibles pérdidas de paquetes que, si bien serían inadmisibles si se están enviando instrucciones, no van a afectar significativamente a la experiencia de usuario en el caso de video streaming.    
  
-En la carpeta WebRTC/redLocal pueden encontrarse los códigos de un emisor (que en este caso es el que actúa como servidor) y un receptor que utilizan WebRTC para implementar video streaming.    
+En la carpeta WebRTC/redLocal pueden encontrarse los códigos de un emisor (que en este caso es el que actúa como servidor, por lo que debe ponerse en marcha antes) y un receptor que utilizan WebRTC para implementar video streaming.    
 
 ## 3. Escenario global   
 
