@@ -80,6 +80,9 @@ En este caso, el bróker tiene que estar también conectado a Internet para que 
 
 El puerto TCP que se indica en la tabla es el que debe usarse para una conexión global entre emisor y receptor. El puerto websockets es el que deberá usar la webapp, tal y como se explicará en el apartado 4.1.
 En la carpeta MQTT/redGlobal pueden encontrarse los códigos de un emisor y un receptor que se comunican el stream de video a través de un bróker público y gratuito. Los códigos son exactamente iguales que los del caso del escenario local excepto por lo que respecta a la conexión con el bróker. En los comentarios del código se indica cómo conectarse al resto de brokers públicos mencionados.   
+
+Existe también un broker privado en el Campus, que lógicamente tiene menor saturación que los brokers públicos y, por tanto, funciona mejor. Para poder usarlo hay que pedir las credenciales a los responsables académicos.     
+
  
 ### 3.2 Websockets
 
