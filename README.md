@@ -149,8 +149,8 @@ Aquí tenemos un programa en python que hace de proxy para facilitar la comunica
 
 ### 5.3 ReceptorWebRTCGlobalCs    
 Este caso si puede ser de aplicación en el contexto del ecosistema porque se trata de recibir el video stream por WebRTC y mostrarlo en un formulario en C#. De momento, no sabemos cómo hacer para recibir el stream directamente en el formulario. Pero tenemos dos alternativas:   
-1   Recoger el stream de video en un script de Python y entregarlo al formulario a través de un canal TCP interno, para que el formulario lo muestre en un pictureBox
-2   Recoger y mostrar el stream de video en un objeto de tipo WebView
+1. Recoger el stream de video en un script de Python y entregarlo al formulario a través de un canal TCP interno, para que el formulario lo muestre en un pictureBox
+2. Recoger y mostrar el stream de video en un objeto de tipo WebView
 
 Para probar ambas alternativas hay que poner en marcha el proxyWebRTC y senderGlobalWebRTC. Para la alternativa 1 se pone en marcha el proyecto de visual C# llamado Receptor. El formulario pondrá en marcha el script receiverParaCs, que es prácticamente igual al receiverGlobalWebRTC, pero con los cambios necesarios para enviar los frames al formulario, en lugar de mostrarlos en una ventana de OpenCV.   
 
