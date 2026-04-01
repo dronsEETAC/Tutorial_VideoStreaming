@@ -13,7 +13,7 @@ En este tutorial describimos en detalle los diferentes escenarios, protocolos y 
    
 Por otra parte, consideraremos tres protocolos para implementar video streaming: MQTT, websockets y WebRTC.   
 
-Naturalmente, otro escenario posible, que no se considera aquí, es que el dron tenga un sistema tema de transmisión de video por un canal específico que le conecta directamente con un receptor de vídeo conectado a la estación de tierra.    
+Naturalmente, otro escenario posible, que no se considera aquí, es que el dron tenga un sistema tema de transmisión de video por un canal específico que le conecta directamente con un receptor de vídeo conectado a la estación de tierra, en la que se mostrará el vídeo directamente al usuario. En ese caso no es necesario emitir el stream de video a ningún otro dispositivo.    
 
 ## 2. Escenario local   
 
